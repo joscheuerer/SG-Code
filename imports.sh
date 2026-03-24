@@ -1,0 +1,21 @@
+#!/bin/sh
+set -e
+
+terraform import -var-file=environments/terraform.tfvars 'module.vpc.aws_vpc.this' 'vpc-0997f6730d02c6d80'
+terraform import -var-file=environments/terraform.tfvars 'module.subnets.aws_subnet.this["sg_vpc_092_private_eu_central_1b"]' 'subnet-011ecca679d30a603'
+terraform import -var-file=environments/terraform.tfvars 'module.subnets.aws_subnet.this["sg_vpc_092_private_eu_central_1a"]' 'subnet-07a8d22bded48fd92'
+terraform import -var-file=environments/terraform.tfvars 'module.subnets.aws_subnet.this["sg_vpc_092_public_eu_central_1b"]' 'subnet-0e2242e016256aec1'
+terraform import -var-file=environments/terraform.tfvars 'module.subnets.aws_subnet.this["sg_vpc_092_public_eu_central_1a"]' 'subnet-0f0eb65e8a2604da7'
+terraform import -var-file=environments/terraform.tfvars 'module.route_tables.aws_route_table.this["sg_vpc_092_private_eu_central_1a"]' 'rtb-01a6048617a0558b4'
+terraform import -var-file=environments/terraform.tfvars 'module.route_tables.aws_route_table.this["sg_vpc_092_private_eu_central_1b"]' 'rtb-0342a7b3c8ccfb67a'
+terraform import -var-file=environments/terraform.tfvars 'module.route_tables.aws_route_table.this["sg_vpc_092_default"]' 'rtb-09e76cc91971c69e4'
+terraform import -var-file=environments/terraform.tfvars 'module.route_tables.aws_route_table.this["sg_vpc_092_public"]' 'rtb-0d0d62c8b7e136273'
+terraform import -var-file=environments/terraform.tfvars 'module.route_tables.aws_route_table_association.this["private_1a"]' 'subnet-07a8d22bded48fd92/rtb-01a6048617a0558b4'
+terraform import -var-file=environments/terraform.tfvars 'module.route_tables.aws_route_table_association.this["private_1b"]' 'subnet-011ecca679d30a603/rtb-0342a7b3c8ccfb67a'
+terraform import -var-file=environments/terraform.tfvars 'module.route_tables.aws_route_table_association.this["public_1a"]' 'subnet-0f0eb65e8a2604da7/rtb-0d0d62c8b7e136273'
+terraform import -var-file=environments/terraform.tfvars 'module.route_tables.aws_route_table_association.this["public_1b"]' 'subnet-0e2242e016256aec1/rtb-0d0d62c8b7e136273'
+terraform import -var-file=environments/terraform.tfvars 'module.route_tables.aws_route.this["public_internet"]' 'rtb-0d0d62c8b7e136273_0.0.0.0/0'
+terraform import -var-file=environments/terraform.tfvars 'module.internet_gateway.aws_internet_gateway.this' 'igw-00447a3f064c26e97'
+terraform import -var-file=environments/terraform.tfvars 'module.security_groups.aws_security_group.this["default"]' 'sg-09a0579a16f31eeaf'
+terraform import -var-file=environments/terraform.tfvars 'module.security_groups.aws_security_group.this["vpc_0997f6730d02c6d80_20251205131349518200000001"]' 'sg-0bd8f1dcd6c6bffba'
+terraform import -var-file=environments/terraform.tfvars 'module.network_acl.aws_network_acl.this' 'acl-02e6cb3cfff349453'
