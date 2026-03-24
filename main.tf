@@ -49,14 +49,7 @@ module "network_acl" {
       from_port  = 0
       to_port    = 0
     },
-    {
-      protocol   = "-1"
-      rule_no    = 32767
-      action     = "deny"
-      cidr_block = "0.0.0.0/0"
-      from_port  = 0
-      to_port    = 0
-    }
+
   ]
   egress_rules = [
     {
@@ -67,13 +60,6 @@ module "network_acl" {
       from_port  = 0
       to_port    = 0
     },
-    {
-      protocol   = "-1"
-      rule_no    = 32767
-      action     = "deny"
-      cidr_block = "0.0.0.0/0"
-      from_port  = 0
-      to_port    = 0
-    }
+
   ]
 }
