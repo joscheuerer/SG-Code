@@ -1,0 +1,29 @@
+region                                 = "eu-central-1"
+vpc_cidr_block                         = "10.0.0.0/16"
+vpc_instance_tenancy                   = "default"
+vpc_enable_dns_support                 = true
+vpc_tags                               = { Name = "vpc_name" }
+subnet_cidr_block                      = "10.0.0.0/24"
+subnet_availability_zone               = "eu-central-1a"
+subnet_map_public_ip_on_launch         = true
+subnet_assign_ipv6_address_on_creation = false
+subnet_tags                            = { Name = "vpc_name-public-eu-central-1a" }
+security_group_name                    = "packer_68c879f3-344d-174a-2c11-4dcb15c975ed"
+security_group_description             = "Temporary group for Packer"
+ebs_availability_zone                  = "eu-central-1a"
+ebs_size                               = 8
+ebs_type                               = "gp2"
+ebs_iops                               = 100
+ebs_encrypted                          = false
+ebs_multi_attach_enabled               = false
+ebs_snapshot_id                        = "snap-0baba8406ae0d8928"
+instance_ami_id                        = "ami-0242293c1166ee926"
+instance_instance_type                 = "t3.medium"
+instance_key_name                      = "packer_68c879f2-1468-642a-6776-a06c2a3c37fc"
+instance_vpc_security_group_ids        = ["sg-04211bd5ce13e32c0"]
+instance_availability_zone             = "eu-central-1a"
+instance_source_dest_check             = true
+instance_ebs_optimized                 = false
+instance_monitoring                    = false
+instance_tenancy                       = "default"
+instance_private_ips                   = ["10.0.0.172"]
