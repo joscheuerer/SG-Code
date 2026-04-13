@@ -5,7 +5,7 @@ variable "availability_zone" {
 
 variable "size" {
   type        = number
-  description = "Size of the drive in GiBs"
+  description = "Size of the EBS volume in GiB"
 }
 
 variable "type" {

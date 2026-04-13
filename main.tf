@@ -23,20 +23,18 @@ module "security_group" {
   name        = var.security_group_name
   description = var.security_group_description
   vpc_id      = module.vpc.vpc_id
-  ingress     = var.security_group_ingress
-  egress      = var.security_group_egress
 }
 
 module "ebs_volume" {
   source = "./modules/ebs_volume"
 
-  availability_zone    = var.ebs_availability_zone
-  size                 = var.ebs_size
-  type                 = var.ebs_type
-  iops                 = var.ebs_iops
-  encrypted            = var.ebs_encrypted
-  multi_attach_enabled = var.ebs_multi_attach_enabled
-  snapshot_id          = var.ebs_snapshot_id
+  availability_zone    = var.ebs_volume_availability_zone
+  size                 = var.ebs_volume_size
+  type                 = var.ebs_volume_type
+  iops                 = var.ebs_volume_iops
+  encrypted            = var.ebs_volume_encrypted
+  multi_attach_enabled = var.ebs_volume_multi_attach_enabled
+  snapshot_id          = var.ebs_volume_snapshot_id
 }
 
 module "instance" {
@@ -44,14 +42,14 @@ module "instance" {
 
   ami                                     = var.instance_ami
   instance_type                           = var.instance_instance_type
+  key_name                                = var.instance_key_name
   subnet_id                               = module.subnet.subnet_id
   vpc_security_group_ids                  = [module.security_group.security_group_id]
-  key_name                                = var.instance_key_name
   availability_zone                       = var.instance_availability_zone
-  tenancy                                 = var.instance_tenancy
-  ebs_optimized                           = var.instance_ebs_optimized
   source_dest_check                       = var.instance_source_dest_check
+  ebs_optimized                           = var.instance_ebs_optimized
   monitoring                              = var.instance_monitoring
+  tenancy                                 = var.instance_tenancy
   capacity_reservation_preference         = var.instance_capacity_reservation_preference
   cpu_core_count                          = var.instance_cpu_core_count
   cpu_threads_per_core                    = var.instance_cpu_threads_per_core

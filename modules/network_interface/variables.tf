@@ -5,7 +5,7 @@ variable "subnet_id" {
 
 variable "private_ips" {
   type        = list(string)
-  description = "List of private IPs to assign to the ENI"
+  description = "Private IP addresses to assign to the ENI"
 }
 
 variable "security_groups" {
@@ -15,7 +15,7 @@ variable "security_groups" {
 
 variable "source_dest_check" {
   type        = bool
-  description = "Whether to enable source destination checking for the ENI"
+  description = "Whether to enable source/destination checking"
 }
 
 variable "attached_instance_id" {
@@ -25,5 +25,5 @@ variable "attached_instance_id" {
 
 variable "device_index" {
   type        = number
-  description = "Integer to define the device index for the attachment"
+  description = "Device index for the ENI attachment"
 }

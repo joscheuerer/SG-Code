@@ -1,14 +1,14 @@
 resource "aws_instance" "this" {
   ami                    = var.ami
   instance_type          = var.instance_type
+  key_name               = var.key_name
   subnet_id              = var.subnet_id
   vpc_security_group_ids = var.vpc_security_group_ids
-  key_name               = var.key_name
   availability_zone      = var.availability_zone
-  tenancy                = var.tenancy
-  ebs_optimized          = var.ebs_optimized
   source_dest_check      = var.source_dest_check
+  ebs_optimized          = var.ebs_optimized
   monitoring             = var.monitoring
+  tenancy                = var.tenancy
 
   capacity_reservation_specification {
     capacity_reservation_preference = var.capacity_reservation_preference

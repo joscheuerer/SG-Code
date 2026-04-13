@@ -1,16 +1,21 @@
 variable "ami" {
   type        = string
-  description = "AMI to use for the instance"
+  description = "AMI ID to use for the instance"
 }
 
 variable "instance_type" {
   type        = string
-  description = "Instance type to use for the instance"
+  description = "Instance type to use"
+}
+
+variable "key_name" {
+  type        = string
+  description = "Key pair name for the instance"
 }
 
 variable "subnet_id" {
   type        = string
-  description = "VPC Subnet ID to launch the instance in"
+  description = "Subnet ID to launch the instance in"
 }
 
 variable "vpc_security_group_ids" {
@@ -18,14 +23,24 @@ variable "vpc_security_group_ids" {
   description = "List of security group IDs to associate with the instance"
 }
 
-variable "key_name" {
-  type        = string
-  description = "Key name of the Key Pair to use for the instance"
-}
-
 variable "availability_zone" {
   type        = string
-  description = "AZ to start the instance in"
+  description = "Availability zone to start the instance in"
+}
+
+variable "source_dest_check" {
+  type        = bool
+  description = "Whether to enable source/destination checking"
+}
+
+variable "ebs_optimized" {
+  type        = bool
+  description = "Whether the instance is EBS-optimized"
+}
+
+variable "monitoring" {
+  type        = bool
+  description = "Whether detailed monitoring is enabled"
 }
 
 variable "tenancy" {
@@ -33,24 +48,9 @@ variable "tenancy" {
   description = "Tenancy of the instance"
 }
 
-variable "ebs_optimized" {
-  type        = bool
-  description = "Whether the launched EC2 instance will be EBS-optimized"
-}
-
-variable "source_dest_check" {
-  type        = bool
-  description = "Controls if traffic is routed to the instance when the destination address does not match"
-}
-
-variable "monitoring" {
-  type        = bool
-  description = "Whether the launched EC2 instance will have detailed monitoring enabled"
-}
-
 variable "capacity_reservation_preference" {
   type        = string
-  description = "Indicates the instance's Capacity Reservation preferences"
+  description = "Capacity reservation preference for the instance"
 }
 
 variable "cpu_core_count" {
@@ -65,7 +65,7 @@ variable "cpu_threads_per_core" {
 
 variable "enclave_options_enabled" {
   type        = bool
-  description = "Whether Nitro Enclaves will be enabled on the instance"
+  description = "Whether Nitro Enclaves are enabled"
 }
 
 variable "metadata_http_endpoint" {
@@ -75,25 +75,25 @@ variable "metadata_http_endpoint" {
 
 variable "metadata_http_protocol_ipv6" {
   type        = string
-  description = "Whether the IPv6 endpoint for the instance metadata service is enabled"
+  description = "Whether the IPv6 endpoint for IMDS is enabled"
 }
 
 variable "metadata_http_put_response_hop_limit" {
   type        = number
-  description = "Desired HTTP PUT response hop limit for instance metadata requests"
+  description = "HTTP PUT response hop limit for instance metadata requests"
 }
 
 variable "metadata_http_tokens" {
   type        = string
-  description = "Whether or not the metadata service requires session tokens"
+  description = "Whether IMDSv2 session tokens are required"
 }
 
 variable "metadata_instance_metadata_tags" {
   type        = string
-  description = "Enables or disables access to instance tags from the instance metadata service"
+  description = "Whether access to instance tags from IMDS is enabled"
 }
 
 variable "root_block_device_delete_on_termination" {
   type        = bool
-  description = "Whether the root volume should be destroyed on instance termination"
+  description = "Whether the root volume is deleted on instance termination"
 }

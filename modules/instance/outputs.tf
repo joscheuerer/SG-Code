@@ -3,7 +3,7 @@ output "instance_id" {
   value       = aws_instance.this.id
 }
 
-output "private_ip" {
-  description = "The private IP address of the EC2 instance"
-  value       = aws_instance.this.private_ip
+output "primary_network_interface_id" {
+  description = "The ID of the instance's primary network interface"
+  value       = aws_instance.this.primary_network_interface_id
 }
