@@ -1,52 +1,83 @@
-# non-prod-data-lake-infrastructure
+# akshat-12-apr-vm-stack
 
 ## Description
 
-Non-production data lake infrastructure including a Lambda execution IAM role and five S3 buckets forming a medallion architecture (landing, bronze, silver, gold, athena-results).
+Azure Virtual Machine stack with managed disks, network interface, and network security group for akshat-12-Apr. Deployed in the `germanywestcentral` region.
 
-## Architecture Overview
+## Stack Overview
 
-This stack provisions:
-- **IAM Role**: A Lambda execution role (`non-prod-file-processor-lambda-role`) with inline policies granting access to S3, SQS, CloudWatch Logs, Athena, and Glue, plus the `AWSLambdaBasicExecutionRole` managed policy.
-- **S3 Buckets (Medallion Architecture)**:
-  - `non-prod-infra-landing-raw` — Landing zone for raw unvalidated ingestion
-  - `non-prod-infra-lake-bronze` — Bronze layer for raw validated permanent storage
-  - `non-prod-infra-lake-silver` — Silver layer for normalized Iceberg tables
-  - `non-prod-infra-lake-gold` — Gold layer for aggregated analytics
-  - `non-prod-infra-athena-results` — Athena query output storage
+This stack provisions the following Azure resources:
 
-## Module Overview
+| Module | Description |
+|--------|-------------|
+| `network_security_group` | Network Security Group with SSH (port 22) inbound allow rule |
+| `network_interface` | Network Interface attached to an existing subnet |
+| `managed_disk` | Managed disks (data disk and OS disk) |
+| `virtual_machine` | Linux Virtual Machine (Ubuntu 24.04 LTS) with SSH key authentication |
 
-| Module | Source | Description |
-|--------|--------|-------------|
-| `iam_role` | `./modules/iam_role` | Lambda execution IAM role with inline policies and managed policy attachments |
-| `s3_bucket` | `./modules/s3_bucket` | S3 bucket (instantiated once per entry in `s3_buckets` map) |
+## Module Details
+
+### network_security_group
+- Creates an NSG named `akshat-12-Apr-nsg` in resource group `adis`
+- Allows inbound SSH (TCP/22) from any source at priority 1000
+
+### network_interface
+- Creates NIC `akshat-12-apr966_z1` in resource group `adis`
+- Attached to subnet in `sg-runner-vnet` (resource group `adis-eu`)
+- Dynamic IPv4 allocation, accelerated networking disabled
+
+### managed_disk
+- `akshat-12-Apr_DataDisk_0`: 4 GB Premium LRS data disk
+- `akshat-12-Apr_OsDisk_1_6457833762cd4ee48bf9e0dbee5f3cb8`: 30 GB StandardSSD LRS OS disk
+
+### virtual_machine
+- VM size: `Standard_B2ms`, Zone: `1`
+- Image: Canonical Ubuntu 24.04 LTS
+- Admin user: `azureuser` with SSH key authentication
+- Data disk attached at LUN 0
 
 ## Variables Reference
 
 | Variable | Type | Description |
 |----------|------|-------------|
-| `region` | `string` | AWS region where resources will be managed |
-| `iam_role_name` | `string` | Friendly name of the IAM role |
-| `iam_role_path` | `string` | Path to the IAM role |
-| `iam_role_max_session_duration` | `number` | Maximum session duration in seconds |
-| `iam_role_assume_role_policy` | `string` | JSON policy document granting permission to assume the role |
-| `iam_role_managed_policy_arns` | `set(string)` | Set of managed policy ARNs to attach to the role |
-| `iam_role_inline_policies` | `map(object({...}))` | Map of inline policies to attach to the role |
-| `iam_role_tags` | `map(string)` | Tags to assign to the IAM role |
-| `s3_buckets` | `map(object({...}))` | Map of S3 bucket configurations (bucket name + tags) |
+| `region` | string | Azure region for all resources |
+| `nsg_name` | string | Name of the NSG |
+| `nsg_resource_group_name` | string | Resource group for the NSG |
+| `nsg_tags` | map(string) | Tags for the NSG |
+| `nic_name` | string | Name of the NIC |
+| `nic_resource_group_name` | string | Resource group for the NIC |
+| `nic_accelerated_networking_enabled` | bool | Accelerated networking toggle |
+| `nic_ip_forwarding_enabled` | bool | IP forwarding toggle |
+| `nic_subnet_id` | string | Subnet ID for NIC |
+| `nic_tags` | map(string) | Tags for the NIC |
+| `managed_disks` | map(object) | Map of managed disk configurations |
+| `vm_name` | string | Name of the VM |
+| `vm_resource_group_name` | string | Resource group for the VM |
+| `vm_size` | string | VM size SKU |
+| `vm_zones` | list(string) | Availability zones |
+| `vm_image_publisher` | string | Image publisher |
+| `vm_image_offer` | string | Image offer |
+| `vm_image_sku` | string | Image SKU |
+| `vm_image_version` | string | Image version |
+| `vm_os_disk_name` | string | OS disk name |
+| `vm_os_disk_caching` | string | OS disk caching mode |
+| `vm_os_type` | string | OS type |
+| `vm_data_disk_name` | string | Data disk name |
+| `vm_data_disk_size_gb` | number | Data disk size in GB |
+| `vm_data_disk_managed_disk_type` | string | Data disk storage type |
+| `vm_computer_name` | string | VM computer name |
+| `vm_admin_username` | string | Admin username |
+| `vm_disable_password_authentication` | bool | Disable password auth (sensitive) |
+| `vm_ssh_public_key_data` | string | SSH public key (sensitive) |
+| `vm_tags` | map(string) | Tags for the VM |
 
 ## Outputs Reference
 
 | Output | Description |
 |--------|-------------|
-| `iam_role_arn` | ARN of the Lambda execution IAM role |
-| `iam_role_name` | Name of the Lambda execution IAM role |
-| `s3_bucket_athena_results_id` | ID of the Athena results S3 bucket |
-| `s3_bucket_lake_bronze_id` | ID of the bronze layer S3 bucket |
-| `s3_bucket_lake_gold_id` | ID of the gold layer S3 bucket |
-| `s3_bucket_lake_silver_id` | ID of the silver layer S3 bucket |
-| `s3_bucket_landing_raw_id` | ID of the landing raw S3 bucket |
+| `nsg_id` | The ID of the Network Security Group |
+| `nic_id` | The ID of the Network Interface |
+| `vm_id` | The ID of the Virtual Machine |
 
 ## Usage Instructions
 
@@ -54,16 +85,13 @@ This stack provisions:
 
 ```sh
 terraform init
-# or
-tofu init
 ```
 
-### 2. Import Existing Resources
+### 2. Import existing resources
 
 ```sh
-chmod +x imports.sh
 ./imports.sh terraform
-# or for OpenTofu:
+# or with OpenTofu:
 ./imports.sh tofu
 ```
 
@@ -73,10 +101,10 @@ chmod +x imports.sh
 terraform plan -var-file environments/sg.tfvars
 ```
 
-Verify that the plan shows **no changes** (zero drift) after import.
-
 ### 4. Apply
 
 ```sh
 terraform apply -var-file environments/sg.tfvars
 ```
+
+> **Note:** Sensitive variables (`vm_disable_password_authentication`, `vm_ssh_public_key_data`) must be supplied via environment variables or a secrets manager — do not commit them to source control.
