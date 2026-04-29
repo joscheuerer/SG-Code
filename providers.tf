@@ -1,3 +1,5 @@
-provider "aws" {
-  region = var.region
+provider "azurerm" {
+  features {}
+
+  resource_provider_registrations = "none"
 }

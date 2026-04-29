@@ -1,47 +1,32 @@
 variable "region" {
-  description = "AWS region where resources will be managed"
+  description = "The Azure region where resources will be deployed"
   type        = string
 }
 
-variable "iam_role_name" {
-  description = "Friendly name of the IAM role"
+variable "resource_group_name" {
+  description = "The name of the resource group"
   type        = string
 }
 
-variable "iam_role_path" {
-  description = "Path to the IAM role"
+variable "virtual_network_name" {
+  description = "The name of the virtual network"
   type        = string
 }
 
-variable "iam_role_max_session_duration" {
-  description = "Maximum session duration in seconds"
-  type        = number
+variable "address_space" {
+  description = "The address space used by the virtual network"
+  type        = list(string)
 }
 
-variable "iam_role_assume_role_policy" {
-  description = "JSON policy document granting permission to assume the role"
-  type        = string
-}
-
-variable "iam_role_managed_policy_arns" {
-  description = "Set of managed policy ARNs to attach to the role"
-  type        = set(string)
-}
-
-variable "iam_role_inline_policies" {
-  description = "Map of inline policies to attach to the role"
-  type        = map(object({ policy_name = string, policy_document = string }))
-}
-
-variable "iam_role_tags" {
-  description = "Tags to assign to the IAM role"
+variable "virtual_network_tags" {
+  description = "A mapping of tags to assign to the virtual network"
   type        = map(string)
 }
 
-variable "s3_buckets" {
-  description = "Map of S3 bucket configurations"
+variable "subnets" {
+  description = "Map of subnets to create within the virtual network, keyed by subnet name"
   type = map(object({
-    bucket = string
-    tags   = map(string)
+    address_prefixes                  = list(string)
+    private_endpoint_network_policies = optional(string, "Enabled")
   }))
 }
