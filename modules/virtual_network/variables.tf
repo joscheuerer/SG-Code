@@ -1,30 +1,33 @@
 variable "name" {
+  description = "The name of the virtual network"
   type        = string
-  description = "Virtual network name"
 }
 
 variable "resource_group_name" {
+  description = "The name of the resource group in which to create the virtual network"
   type        = string
-  description = "Resource group name"
 }
 
 variable "location" {
+  description = "The Azure region where the virtual network is created"
   type        = string
-  description = "Azure region"
 }
 
 variable "address_space" {
+  description = "The address space used by the virtual network"
   type        = list(string)
-  description = "Virtual network address space"
 }
 
 variable "tags" {
+  description = "A mapping of tags to assign to the virtual network"
   type        = map(string)
-  description = "Resource tags"
 }
 
 variable "subnets" {
-  type        = map(object({ address_prefix = string }))
-  description = "Subnets to create"
-  default     = {}
+  description = "Map of subnets to create within the virtual network, keyed by subnet name"
+  type = map(object({
+    address_prefixes                  = list(string)
+    private_endpoint_network_policies = optional(string, "Enabled")
+  }))
+  default = {}
 }

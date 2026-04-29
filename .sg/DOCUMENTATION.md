@@ -1,52 +1,44 @@
-# non-prod-data-lake-infrastructure
+# snipeit-fullstack-network
 
 ## Description
 
-Non-production data lake infrastructure including a Lambda execution IAM role and five S3 buckets forming a medallion architecture (landing, bronze, silver, gold, athena-results).
+Virtual network and subnet infrastructure for the SnipeIT FullStack application in Germany West Central.
 
-## Architecture Overview
+## Stack Overview
 
-This stack provisions:
-- **IAM Role**: A Lambda execution role (`non-prod-file-processor-lambda-role`) with inline policies granting access to S3, SQS, CloudWatch Logs, Athena, and Glue, plus the `AWSLambdaBasicExecutionRole` managed policy.
-- **S3 Buckets (Medallion Architecture)**:
-  - `non-prod-infra-landing-raw` — Landing zone for raw unvalidated ingestion
-  - `non-prod-infra-lake-bronze` — Bronze layer for raw validated permanent storage
-  - `non-prod-infra-lake-silver` — Silver layer for normalized Iceberg tables
-  - `non-prod-infra-lake-gold` — Gold layer for aggregated analytics
-  - `non-prod-infra-athena-results` — Athena query output storage
+This stack provisions the core networking layer for the SnipeIT FullStack application, including a virtual network and its associated subnets in the `germanywestcentral` Azure region.
 
-## Module Overview
+## Modules
 
 | Module | Source | Description |
 |--------|--------|-------------|
-| `iam_role` | `./modules/iam_role` | Lambda execution IAM role with inline policies and managed policy attachments |
-| `s3_bucket` | `./modules/s3_bucket` | S3 bucket (instantiated once per entry in `s3_buckets` map) |
+| `virtual_network` | `./modules/virtual_network` | Manages the full-stack virtual network (primary) and its app subnet (child) |
+
+### Module: `virtual_network`
+
+Provisions an `azurerm_virtual_network` resource and one or more `azurerm_subnet` resources within it. Subnets are created via `for_each` over the `subnets` input map.
+
+**Resources managed:**
+- `azurerm_virtual_network.this` — The primary virtual network
+- `azurerm_subnet.this` (for_each) — Subnets within the virtual network
 
 ## Variables Reference
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `region` | `string` | AWS region where resources will be managed |
-| `iam_role_name` | `string` | Friendly name of the IAM role |
-| `iam_role_path` | `string` | Path to the IAM role |
-| `iam_role_max_session_duration` | `number` | Maximum session duration in seconds |
-| `iam_role_assume_role_policy` | `string` | JSON policy document granting permission to assume the role |
-| `iam_role_managed_policy_arns` | `set(string)` | Set of managed policy ARNs to attach to the role |
-| `iam_role_inline_policies` | `map(object({...}))` | Map of inline policies to attach to the role |
-| `iam_role_tags` | `map(string)` | Tags to assign to the IAM role |
-| `s3_buckets` | `map(object({...}))` | Map of S3 bucket configurations (bucket name + tags) |
+| Name | Type | Description | Default |
+|------|------|-------------|---------|
+| `region` | `string` | The Azure region where resources will be deployed | — |
+| `resource_group_name` | `string` | The name of the resource group | — |
+| `virtual_network_name` | `string` | The name of the virtual network | — |
+| `address_space` | `list(string)` | The address space used by the virtual network | — |
+| `virtual_network_tags` | `map(string)` | A mapping of tags to assign to the virtual network | — |
+| `subnets` | `map(object({address_prefixes=list(string)}))` | Map of subnets to create, keyed by subnet name | — |
 
 ## Outputs Reference
 
-| Output | Description |
-|--------|-------------|
-| `iam_role_arn` | ARN of the Lambda execution IAM role |
-| `iam_role_name` | Name of the Lambda execution IAM role |
-| `s3_bucket_athena_results_id` | ID of the Athena results S3 bucket |
-| `s3_bucket_lake_bronze_id` | ID of the bronze layer S3 bucket |
-| `s3_bucket_lake_gold_id` | ID of the gold layer S3 bucket |
-| `s3_bucket_lake_silver_id` | ID of the silver layer S3 bucket |
-| `s3_bucket_landing_raw_id` | ID of the landing raw S3 bucket |
+| Name | Description |
+|------|-------------|
+| `virtual_network_id` | The ID of the virtual network |
+| `virtual_network_name` | The name of the virtual network |
 
 ## Usage Instructions
 
@@ -54,14 +46,11 @@ This stack provisions:
 
 ```sh
 terraform init
-# or
-tofu init
 ```
 
-### 2. Import Existing Resources
+### 2. Import existing resources
 
 ```sh
-chmod +x imports.sh
 ./imports.sh terraform
 # or for OpenTofu:
 ./imports.sh tofu
@@ -73,10 +62,19 @@ chmod +x imports.sh
 terraform plan -var-file environments/sg.tfvars
 ```
 
-Verify that the plan shows **no changes** (zero drift) after import.
-
 ### 4. Apply
 
 ```sh
 terraform apply -var-file environments/sg.tfvars
 ```
+
+## Environment Values (`environments/sg.tfvars`)
+
+| Variable | Value |
+|----------|-------|
+| `region` | `germanywestcentral` |
+| `resource_group_name` | `sg-rg-full` |
+| `virtual_network_name` | `full-stack-vnet` |
+| `address_space` | `["10.0.0.0/16"]` |
+| `virtual_network_tags` | `{Project="SnipeIT-FullStack", Environment="dev", ManagedBy="Terraform"}` |
+| `subnets` | `{app={address_prefixes=["10.0.2.0/24"]}}` |
