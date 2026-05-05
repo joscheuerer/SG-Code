@@ -1,52 +1,38 @@
-# non-prod-data-lake-infrastructure
+# eks-vpc-internet-gateway
 
 ## Description
 
-Non-production data lake infrastructure including a Lambda execution IAM role and five S3 buckets forming a medallion architecture (landing, bronze, silver, gold, athena-results).
+Internet Gateway for EKS VPC (vpc-eks) attached to vpc-0b77450939be7f679 in eu-west-2.
 
-## Architecture Overview
-
-This stack provisions:
-- **IAM Role**: A Lambda execution role (`non-prod-file-processor-lambda-role`) with inline policies granting access to S3, SQS, CloudWatch Logs, Athena, and Glue, plus the `AWSLambdaBasicExecutionRole` managed policy.
-- **S3 Buckets (Medallion Architecture)**:
-  - `non-prod-infra-landing-raw` — Landing zone for raw unvalidated ingestion
-  - `non-prod-infra-lake-bronze` — Bronze layer for raw validated permanent storage
-  - `non-prod-infra-lake-silver` — Silver layer for normalized Iceberg tables
-  - `non-prod-infra-lake-gold` — Gold layer for aggregated analytics
-  - `non-prod-infra-athena-results` — Athena query output storage
+This stack manages an AWS Internet Gateway using the external `terraform-aws-vpc` module. The VPC itself is not managed here (`create_vpc = false`); only the Internet Gateway resource is imported and managed.
 
 ## Module Overview
 
 | Module | Source | Description |
 |--------|--------|-------------|
-| `iam_role` | `./modules/iam_role` | Lambda execution IAM role with inline policies and managed policy attachments |
-| `s3_bucket` | `./modules/s3_bucket` | S3 bucket (instantiated once per entry in `s3_buckets` map) |
+| `vpc_eks` | `git::https://github.com/StackGuardian/terraform-aws-vpc.git?ref=master` | AWS VPC module used to manage the Internet Gateway for the EKS VPC |
 
 ## Variables Reference
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `region` | `string` | AWS region where resources will be managed |
-| `iam_role_name` | `string` | Friendly name of the IAM role |
-| `iam_role_path` | `string` | Path to the IAM role |
-| `iam_role_max_session_duration` | `number` | Maximum session duration in seconds |
-| `iam_role_assume_role_policy` | `string` | JSON policy document granting permission to assume the role |
-| `iam_role_managed_policy_arns` | `set(string)` | Set of managed policy ARNs to attach to the role |
-| `iam_role_inline_policies` | `map(object({...}))` | Map of inline policies to attach to the role |
-| `iam_role_tags` | `map(string)` | Tags to assign to the IAM role |
-| `s3_buckets` | `map(object({...}))` | Map of S3 bucket configurations (bucket name + tags) |
+| Name | Type | Description | Default |
+|------|------|-------------|---------|
+| `region` | `string` | AWS region | `"eu-west-2"` |
+| `name` | `string` | Name identifier for resources | `"vpc-eks"` |
+| `create_vpc` | `bool` | Controls if VPC should be created | `false` |
+| `create_igw` | `bool` | Controls if an Internet Gateway is created | `true` |
+| `create_egress_only_igw` | `bool` | Controls if an Egress Only Internet Gateway is created | `false` |
+| `enable_nat_gateway` | `bool` | Controls if NAT Gateways are provisioned | `false` |
+| `create_flow_log_cloudwatch_iam_role` | `bool` | Whether to create IAM role for VPC Flow Logs | `false` |
+| `create_flow_log_cloudwatch_log_group` | `bool` | Whether to create CloudWatch log group for VPC Flow Logs | `false` |
+| `igw_tags` | `map(string)` | Additional tags for the Internet Gateway | see tfvars |
+| `tags` | `map(string)` | A map of tags to add to all resources | see tfvars |
 
 ## Outputs Reference
 
-| Output | Description |
-|--------|-------------|
-| `iam_role_arn` | ARN of the Lambda execution IAM role |
-| `iam_role_name` | Name of the Lambda execution IAM role |
-| `s3_bucket_athena_results_id` | ID of the Athena results S3 bucket |
-| `s3_bucket_lake_bronze_id` | ID of the bronze layer S3 bucket |
-| `s3_bucket_lake_gold_id` | ID of the gold layer S3 bucket |
-| `s3_bucket_lake_silver_id` | ID of the silver layer S3 bucket |
-| `s3_bucket_landing_raw_id` | ID of the landing raw S3 bucket |
+| Name | Description |
+|------|-------------|
+| `igw_id` | The ID of the Internet Gateway |
+| `igw_arn` | The ARN of the Internet Gateway |
 
 ## Usage Instructions
 
@@ -58,12 +44,11 @@ terraform init
 tofu init
 ```
 
-### 2. Import Existing Resources
+### 2. Import existing resources
 
 ```sh
-chmod +x imports.sh
 ./imports.sh terraform
-# or for OpenTofu:
+# or
 ./imports.sh tofu
 ```
 
@@ -71,12 +56,20 @@ chmod +x imports.sh
 
 ```sh
 terraform plan -var-file environments/sg.tfvars
+# or
+tofu plan -var-file environments/sg.tfvars
 ```
-
-Verify that the plan shows **no changes** (zero drift) after import.
 
 ### 4. Apply
 
 ```sh
 terraform apply -var-file environments/sg.tfvars
+# or
+tofu apply -var-file environments/sg.tfvars
 ```
+
+## Notes
+
+- `create_vpc = false` ensures the VPC itself is not created or managed by this stack.
+- The Internet Gateway (`igw-00feab76abd7ba8e7`) is imported into state via `imports.sh`.
+- The VPC (`vpc-0b77450939be7f679`) is an external dependency and must exist prior to applying this stack.
