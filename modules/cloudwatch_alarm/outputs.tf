@@ -1,9 +1,9 @@
 output "alarm_arn" {
   description = "The ARN of the CloudWatch alarm"
-  value       = module.cloudwatch_alarm.alarm_arn
+  value       = aws_cloudwatch_alarm.this.arn
 }
 
 output "alarm_name" {
   description = "The name of the CloudWatch alarm"
-  value       = module.cloudwatch_alarm.alarm_name
+  value       = aws_cloudwatch_alarm.this.alarm_name
 }

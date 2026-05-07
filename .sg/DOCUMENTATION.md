@@ -1,52 +1,53 @@
-# non-prod-data-lake-infrastructure
+# de-manuel-meireles-clickhouse-loader-monitoring
 
 ## Description
 
-Non-production data lake infrastructure including a Lambda execution IAM role and five S3 buckets forming a medallion architecture (landing, bronze, silver, gold, athena-results).
+CloudWatch alarm monitoring ClickHouse loader Lambda errors for the de-manuel-meireles environment.
 
-## Architecture Overview
+## Stack Overview
 
-This stack provisions:
-- **IAM Role**: A Lambda execution role (`non-prod-file-processor-lambda-role`) with inline policies granting access to S3, SQS, CloudWatch Logs, Athena, and Glue, plus the `AWSLambdaBasicExecutionRole` managed policy.
-- **S3 Buckets (Medallion Architecture)**:
-  - `non-prod-infra-landing-raw` — Landing zone for raw unvalidated ingestion
-  - `non-prod-infra-lake-bronze` — Bronze layer for raw validated permanent storage
-  - `non-prod-infra-lake-silver` — Silver layer for normalized Iceberg tables
-  - `non-prod-infra-lake-gold` — Gold layer for aggregated analytics
-  - `non-prod-infra-athena-results` — Athena query output storage
+| Component | Details |
+|-----------|---------|
+| Stack Name | de-manuel-meireles-clickhouse-loader-monitoring |
+| Region | eu-central-1 |
+| Environment | de-manuel-meireles |
 
-## Module Overview
+## Modules
 
-| Module | Source | Description |
-|--------|--------|-------------|
-| `iam_role` | `./modules/iam_role` | Lambda execution IAM role with inline policies and managed policy attachments |
-| `s3_bucket` | `./modules/s3_bucket` | S3 bucket (instantiated once per entry in `s3_buckets` map) |
+### `cloudwatch_alarm` (`./modules/cloudwatch_alarm`)
+
+Manages the CloudWatch alarm for ClickHouse loader Lambda error monitoring.
+
+**Resources:**
+| Resource Type | Logical Name | Description |
+|---------------|--------------|-------------|
+| `aws_cloudwatch_alarm` | `this` | CloudWatch alarm tracking Lambda Errors metric |
 
 ## Variables Reference
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `region` | `string` | AWS region where resources will be managed |
-| `iam_role_name` | `string` | Friendly name of the IAM role |
-| `iam_role_path` | `string` | Path to the IAM role |
-| `iam_role_max_session_duration` | `number` | Maximum session duration in seconds |
-| `iam_role_assume_role_policy` | `string` | JSON policy document granting permission to assume the role |
-| `iam_role_managed_policy_arns` | `set(string)` | Set of managed policy ARNs to attach to the role |
-| `iam_role_inline_policies` | `map(object({...}))` | Map of inline policies to attach to the role |
-| `iam_role_tags` | `map(string)` | Tags to assign to the IAM role |
-| `s3_buckets` | `map(object({...}))` | Map of S3 bucket configurations (bucket name + tags) |
+| Name | Type | Description | Default |
+|------|------|-------------|---------|
+| `region` | `string` | AWS region to deploy resources | — |
+| `alarm_name` | `string` | The name of the CloudWatch alarm | — |
+| `alarm_description` | `string` | Description of the CloudWatch alarm | — |
+| `actions_enabled` | `bool` | Whether actions should be executed during alarm state changes | — |
+| `comparison_operator` | `string` | The arithmetic operation to use when comparing the statistic and threshold | — |
+| `evaluation_periods` | `number` | The number of periods over which data is compared to the specified threshold | — |
+| `metric_name` | `string` | The name of the metric associated with the alarm | — |
+| `namespace` | `string` | The namespace for the alarm metric | — |
+| `period` | `number` | The period in seconds over which the statistic is applied | — |
+| `statistic` | `string` | The statistic to apply to the alarm metric | — |
+| `threshold` | `number` | The value against which the specified statistic is compared | — |
+| `treat_missing_data` | `string` | How to treat missing data points | — |
+| `dimensions` | `map(string)` | The dimensions for the alarm metric | — |
+| `tags` | `map(string)` | Tags to assign to the CloudWatch alarm | — |
 
 ## Outputs Reference
 
-| Output | Description |
-|--------|-------------|
-| `iam_role_arn` | ARN of the Lambda execution IAM role |
-| `iam_role_name` | Name of the Lambda execution IAM role |
-| `s3_bucket_athena_results_id` | ID of the Athena results S3 bucket |
-| `s3_bucket_lake_bronze_id` | ID of the bronze layer S3 bucket |
-| `s3_bucket_lake_gold_id` | ID of the gold layer S3 bucket |
-| `s3_bucket_lake_silver_id` | ID of the silver layer S3 bucket |
-| `s3_bucket_landing_raw_id` | ID of the landing raw S3 bucket |
+| Name | Description |
+|------|-------------|
+| `alarm_arn` | The ARN of the CloudWatch alarm |
+| `alarm_name` | The name of the CloudWatch alarm |
 
 ## Usage Instructions
 
@@ -54,14 +55,11 @@ This stack provisions:
 
 ```sh
 terraform init
-# or
-tofu init
 ```
 
 ### 2. Import Existing Resources
 
 ```sh
-chmod +x imports.sh
 ./imports.sh terraform
 # or for OpenTofu:
 ./imports.sh tofu
@@ -73,10 +71,21 @@ chmod +x imports.sh
 terraform plan -var-file environments/sg.tfvars
 ```
 
-Verify that the plan shows **no changes** (zero drift) after import.
-
 ### 4. Apply
 
 ```sh
 terraform apply -var-file environments/sg.tfvars
 ```
+
+## Alarm Configuration
+
+| Setting | Value |
+|---------|-------|
+| Metric | `Errors` in `AWS/Lambda` namespace |
+| Function | `de-manuel-meireles-clickhouse-loader-lambda` |
+| Comparison | `GreaterThanThreshold` |
+| Threshold | `0` |
+| Evaluation Periods | `2` |
+| Period | `60s` |
+| Statistic | `Sum` |
+| Missing Data | `notBreaching` |
