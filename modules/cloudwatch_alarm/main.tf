@@ -1,5 +1,4 @@
-module "cloudwatch_alarm" {
-  source              = "./modules/cloudwatch_alarm"
+resource "aws_cloudwatch_alarm" "this" {
   alarm_name          = var.alarm_name
   alarm_description   = var.alarm_description
   actions_enabled     = var.actions_enabled

@@ -1,8 +1,3 @@
-variable "region" {
-  description = "AWS region to deploy resources"
-  type        = string
-}
-
 variable "alarm_name" {
   description = "The name of the CloudWatch alarm"
   type        = string
