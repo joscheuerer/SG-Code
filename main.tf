@@ -1,19 +1,14 @@
-module "iam_role" {
-  source = "./modules/iam_role"
+module "iam_instance_profile" {
+  source = "./modules/iam_instance_profile"
 
-  assume_role_policy   = var.iam_role_assume_role_policy
-  inline_policies      = var.iam_role_inline_policies
-  managed_policy_arns  = var.iam_role_managed_policy_arns
-  max_session_duration = var.iam_role_max_session_duration
-  name                 = var.iam_role_name
-  path                 = var.iam_role_path
-  tags                 = var.iam_role_tags
+  name = var.instance_profile_name
+  path = var.instance_profile_path
+  role = var.instance_profile_role
 }
 
-module "s3_bucket" {
-  source   = "./modules/s3_bucket"
-  for_each = var.s3_buckets
+module "key_pair" {
+  source = "./modules/key_pair"
 
-  bucket = each.value.bucket
-  tags   = each.value.tags
+  key_name   = var.key_pair_key_name
+  public_key = var.key_pair_public_key
 }

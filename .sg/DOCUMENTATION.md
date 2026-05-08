@@ -1,52 +1,52 @@
-# non-prod-data-lake-infrastructure
+# neha-private-runner-infrastructure
 
 ## Description
 
-Non-production data lake infrastructure including a Lambda execution IAM role and five S3 buckets forming a medallion architecture (landing, bronze, silver, gold, athena-results).
+EC2 instances (private runner ASG node and community01), IAM instance profile, key pair, and network interface for the Neha Private Runner setup in eu-central-1.
 
 ## Architecture Overview
 
-This stack provisions:
-- **IAM Role**: A Lambda execution role (`non-prod-file-processor-lambda-role`) with inline policies granting access to S3, SQS, CloudWatch Logs, Athena, and Glue, plus the `AWSLambdaBasicExecutionRole` managed policy.
-- **S3 Buckets (Medallion Architecture)**:
-  - `non-prod-infra-landing-raw` — Landing zone for raw unvalidated ingestion
-  - `non-prod-infra-lake-bronze` — Bronze layer for raw validated permanent storage
-  - `non-prod-infra-lake-silver` — Silver layer for normalized Iceberg tables
-  - `non-prod-infra-lake-gold` — Gold layer for aggregated analytics
-  - `non-prod-infra-athena-results` — Athena query output storage
+This stack provisions the following resources in `eu-central-1`:
+
+- **IAM Instance Profile** – `Neha_Private_Runner-runner-instance-profile` backed by the `Neha_Private_Runner-ec2-private-runner-role` IAM role.
+- **EC2 Key Pair** – `adis-key-pair` used by the private runner ASG instance.
+- **EC2 Instances** (managed via `for_each`):
+  - `neha_private_runner_private_runner_asg` – `t3.medium` in `eu-central-1a`, part of the private runner ASG.
+  - `community01` – `t2.small` in `eu-central-1a`, standalone community instance.
+- **Network Interface** – Primary ENI (`eni-04f85c5758d32f536`) with private IP `10.0.0.212` in subnet `subnet-0b77c0d76befaf70d`.
 
 ## Module Overview
 
 | Module | Source | Description |
 |--------|--------|-------------|
-| `iam_role` | `./modules/iam_role` | Lambda execution IAM role with inline policies and managed policy attachments |
-| `s3_bucket` | `./modules/s3_bucket` | S3 bucket (instantiated once per entry in `s3_buckets` map) |
+| `iam_instance_profile` | `./modules/iam_instance_profile` | IAM instance profile for private runner EC2 instances |
+| `key_pair` | `./modules/key_pair` | EC2 key pair used by instances |
+| `instance` | `./modules/instance` | Manages EC2 instances (for_each over `var.instances`) |
+| `network_interface` | `./modules/network_interface` | Primary network interface for the private runner EC2 instance |
 
 ## Variables Reference
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `region` | `string` | AWS region where resources will be managed |
-| `iam_role_name` | `string` | Friendly name of the IAM role |
-| `iam_role_path` | `string` | Path to the IAM role |
-| `iam_role_max_session_duration` | `number` | Maximum session duration in seconds |
-| `iam_role_assume_role_policy` | `string` | JSON policy document granting permission to assume the role |
-| `iam_role_managed_policy_arns` | `set(string)` | Set of managed policy ARNs to attach to the role |
-| `iam_role_inline_policies` | `map(object({...}))` | Map of inline policies to attach to the role |
-| `iam_role_tags` | `map(string)` | Tags to assign to the IAM role |
-| `s3_buckets` | `map(object({...}))` | Map of S3 bucket configurations (bucket name + tags) |
+| Name | Type | Description |
+|------|------|-------------|
+| `region` | `string` | AWS region |
+| `instance_profile_name` | `string` | Name of the IAM instance profile |
+| `instance_profile_path` | `string` | Path to the IAM instance profile |
+| `instance_profile_role` | `string` | Name of the IAM role to associate with the instance profile |
+| `key_pair_key_name` | `string` | Name of the EC2 key pair |
+| `key_pair_public_key` | `string` (sensitive) | Public key material for the EC2 key pair |
+| `instances` | `map(object(...))` | Map of EC2 instance configurations |
+| `eni_subnet_id` | `string` | Subnet ID for the primary network interface |
+| `eni_private_ips` | `list(string)` | List of private IPs to assign to the ENI |
+| `eni_security_groups` | `list(string)` | List of security group IDs to assign to the ENI |
+| `eni_source_dest_check` | `bool` | Whether to enable source/destination checking on the ENI |
 
 ## Outputs Reference
 
-| Output | Description |
-|--------|-------------|
-| `iam_role_arn` | ARN of the Lambda execution IAM role |
-| `iam_role_name` | Name of the Lambda execution IAM role |
-| `s3_bucket_athena_results_id` | ID of the Athena results S3 bucket |
-| `s3_bucket_lake_bronze_id` | ID of the bronze layer S3 bucket |
-| `s3_bucket_lake_gold_id` | ID of the gold layer S3 bucket |
-| `s3_bucket_lake_silver_id` | ID of the silver layer S3 bucket |
-| `s3_bucket_landing_raw_id` | ID of the landing raw S3 bucket |
+| Name | Description |
+|------|-------------|
+| `instance_profile_arn` | ARN of the IAM instance profile |
+| `key_pair_key_name` | Name of the EC2 key pair |
+| `network_interface_id` | ID of the primary network interface |
 
 ## Usage Instructions
 
@@ -54,16 +54,13 @@ This stack provisions:
 
 ```sh
 terraform init
-# or
-tofu init
 ```
 
-### 2. Import Existing Resources
+### 2. Import existing resources
 
 ```sh
-chmod +x imports.sh
 ./imports.sh terraform
-# or for OpenTofu:
+# or with OpenTofu:
 ./imports.sh tofu
 ```
 
@@ -73,10 +70,14 @@ chmod +x imports.sh
 terraform plan -var-file environments/sg.tfvars
 ```
 
-Verify that the plan shows **no changes** (zero drift) after import.
-
 ### 4. Apply
 
 ```sh
 terraform apply -var-file environments/sg.tfvars
 ```
+
+## Notes
+
+- The `key_pair_public_key` variable is sensitive. After import, Terraform will attempt to detect drift on the public key. Since the AWS API does not return the public key, set this variable to the actual public key value to avoid unintended replacement.
+- Tags prefixed with `aws:` (e.g., `aws:autoscaling:groupName`) are managed by AWS and are included in the configuration to prevent drift. Do not remove them.
+- The `root_block_device_iops` for `gp2` volumes is informational; AWS manages IOPS automatically for `gp2`. Setting it to `0` or `100` in the config matches the discovered state.
