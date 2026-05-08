@@ -1,47 +1,85 @@
 variable "region" {
-  description = "AWS region where resources will be managed"
+  description = "AWS region"
   type        = string
 }
 
-variable "iam_role_name" {
-  description = "Friendly name of the IAM role"
+variable "instance_profile_name" {
+  description = "Name of the IAM instance profile"
   type        = string
 }
 
-variable "iam_role_path" {
-  description = "Path to the IAM role"
+variable "instance_profile_path" {
+  description = "Path to the IAM instance profile"
   type        = string
 }
 
-variable "iam_role_max_session_duration" {
-  description = "Maximum session duration in seconds"
-  type        = number
-}
-
-variable "iam_role_assume_role_policy" {
-  description = "JSON policy document granting permission to assume the role"
+variable "instance_profile_role" {
+  description = "Name of the IAM role to associate with the instance profile"
   type        = string
 }
 
-variable "iam_role_managed_policy_arns" {
-  description = "Set of managed policy ARNs to attach to the role"
-  type        = set(string)
+variable "key_pair_key_name" {
+  description = "Name of the EC2 key pair"
+  type        = string
 }
 
-variable "iam_role_inline_policies" {
-  description = "Map of inline policies to attach to the role"
-  type        = map(object({ policy_name = string, policy_document = string }))
+variable "key_pair_public_key" {
+  description = "Public key material for the EC2 key pair"
+  type        = string
+  sensitive   = true
 }
 
-variable "iam_role_tags" {
-  description = "Tags to assign to the IAM role"
-  type        = map(string)
-}
-
-variable "s3_buckets" {
-  description = "Map of S3 bucket configurations"
+variable "instances" {
+  description = "Map of EC2 instance configurations"
   type = map(object({
-    bucket = string
-    tags   = map(string)
+    ami                         = string
+    associate_public_ip_address = bool
+    availability_zone           = string
+    ebs_optimized               = bool
+    iam_instance_profile        = string
+    instance_type               = string
+    key_name                    = string
+    monitoring                  = bool
+    source_dest_check           = bool
+    subnet_id                   = string
+    tags                        = map(string)
+    tenancy                     = string
+    volume_tags                 = map(string)
+    vpc_security_group_ids      = list(string)
+
+    capacity_reservation_preference = string
+    enclave_options_enabled         = bool
+
+    metadata_http_endpoint               = string
+    metadata_http_protocol_ipv6          = string
+    metadata_http_put_response_hop_limit = number
+    metadata_http_tokens                 = string
+    metadata_instance_metadata_tags      = string
+
+    root_block_device_delete_on_termination = bool
+    root_block_device_encrypted             = bool
+    root_block_device_iops                  = number
+    root_block_device_volume_size           = number
+    root_block_device_volume_type           = string
   }))
+}
+
+variable "eni_subnet_id" {
+  description = "Subnet ID for the primary network interface"
+  type        = string
+}
+
+variable "eni_private_ips" {
+  description = "List of private IPs to assign to the ENI"
+  type        = list(string)
+}
+
+variable "eni_security_groups" {
+  description = "List of security group IDs to assign to the ENI"
+  type        = list(string)
+}
+
+variable "eni_source_dest_check" {
+  description = "Whether to enable source/destination checking on the ENI"
+  type        = bool
 }
