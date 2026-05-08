@@ -1,37 +1,30 @@
-variable "assume_role_policy" {
-  description = "JSON policy document granting permission to assume the role"
-  type        = string
-}
-
-variable "inline_policies" {
-  description = "Map of inline policies to attach to the role"
-  type        = map(object({ policy_name = string, policy_document = string }))
-  default     = {}
-}
-
-variable "managed_policy_arns" {
-  description = "Set of managed policy ARNs to attach to the role"
-  type        = set(string)
-  default     = []
-}
-
-variable "max_session_duration" {
-  description = "Maximum session duration in seconds"
-  type        = number
-}
-
 variable "name" {
-  description = "Friendly name of the IAM role"
   type        = string
+  description = "Friendly name of the IAM role"
+}
+
+variable "assume_role_policy" {
+  type        = string
+  description = "Policy document granting permission to assume the role (JSON string)"
+}
+
+variable "description" {
+  type        = string
+  description = "Description of the IAM role"
 }
 
 variable "path" {
-  description = "Path to the IAM role"
   type        = string
+  description = "Path to the IAM role"
 }
 
-variable "tags" {
-  description = "Tags to assign to the IAM role"
-  type        = map(string)
-  default     = {}
+variable "max_session_duration" {
+  type        = number
+  description = "Maximum session duration in seconds"
+}
+
+variable "attached_policy_arns" {
+  type        = set(string)
+  description = "Set of managed policy ARNs to attach to the role"
+  default     = []
 }

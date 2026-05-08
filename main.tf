@@ -1,19 +1,30 @@
 module "iam_role" {
-  source = "./modules/iam_role"
-
-  assume_role_policy   = var.iam_role_assume_role_policy
-  inline_policies      = var.iam_role_inline_policies
-  managed_policy_arns  = var.iam_role_managed_policy_arns
-  max_session_duration = var.iam_role_max_session_duration
+  source               = "./modules/iam_role"
   name                 = var.iam_role_name
+  assume_role_policy   = var.iam_role_assume_role_policy
+  description          = var.iam_role_description
   path                 = var.iam_role_path
-  tags                 = var.iam_role_tags
+  max_session_duration = var.iam_role_max_session_duration
+  attached_policy_arns = var.iam_role_attached_policy_arns
+}
+
+module "eks_cluster" {
+  source                    = "./modules/eks_cluster"
+  name                      = var.eks_cluster_name
+  role_arn                  = module.iam_role.arn
+  cluster_version           = var.eks_cluster_version
+  enabled_cluster_log_types = var.eks_cluster_enabled_log_types
+  authentication_mode       = var.eks_cluster_authentication_mode
+  subnet_ids                = var.eks_cluster_subnet_ids
+  endpoint_private_access   = var.eks_cluster_endpoint_private_access
+  endpoint_public_access    = var.eks_cluster_endpoint_public_access
+  public_access_cidrs       = var.eks_cluster_public_access_cidrs
+  service_ipv4_cidr         = var.eks_cluster_service_ipv4_cidr
+  ip_family                 = var.eks_cluster_ip_family
 }
 
 module "s3_bucket" {
-  source   = "./modules/s3_bucket"
-  for_each = var.s3_buckets
-
-  bucket = each.value.bucket
-  tags   = each.value.tags
+  source  = "./modules/s3_bucket"
+  bucket  = var.s3_bucket_name
+  tags    = var.s3_bucket_tags
 }
