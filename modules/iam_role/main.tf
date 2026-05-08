@@ -1,16 +1,13 @@
 resource "aws_iam_role" "this" {
-  assume_role_policy   = var.assume_role_policy
-  managed_policy_arns  = var.managed_policy_arns
-  max_session_duration = var.max_session_duration
   name                 = var.name
+  assume_role_policy   = var.assume_role_policy
+  description          = var.description
+  max_session_duration = var.max_session_duration
   path                 = var.path
-  tags                 = var.tags
+}
 
-  dynamic "inline_policy" {
-    for_each = var.inline_policies
-    content {
-      name   = inline_policy.value.policy_name
-      policy = inline_policy.value.policy_document
-    }
-  }
+resource "aws_iam_role_policy_attachment" "this" {
+  for_each   = var.attached_policy_arns
+  role       = aws_iam_role.this.name
+  policy_arn = each.value
 }
