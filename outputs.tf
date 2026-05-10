@@ -1,34 +1,39 @@
-output "iam_role_arn" {
-  description = "ARN of the Lambda execution IAM role"
-  value       = module.iam_role.arn
+output "vpc_id" {
+  description = "The ID of the VPC"
+  value       = module.vpc.vpc_id
 }
 
-output "iam_role_name" {
-  description = "Name of the Lambda execution IAM role"
-  value       = module.iam_role.name
+output "subnet_id" {
+  description = "The ID of the subnet"
+  value       = module.subnet.subnet_id
 }
 
-output "s3_bucket_athena_results_id" {
-  description = "ID of the Athena results S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_athena_results"].id
+output "security_group_id" {
+  description = "The ID of the security group"
+  value       = module.security_group.security_group_id
 }
 
-output "s3_bucket_lake_bronze_id" {
-  description = "ID of the bronze layer S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_lake_bronze"].id
+output "instance_id" {
+  description = "The ID of the EC2 instance"
+  value       = module.instance.instance_id
 }
 
-output "s3_bucket_lake_gold_id" {
-  description = "ID of the gold layer S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_lake_gold"].id
+output "instance_private_ip" {
+  description = "The private IP address of the EC2 instance"
+  value       = module.instance.private_ip
 }
 
-output "s3_bucket_lake_silver_id" {
-  description = "ID of the silver layer S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_lake_silver"].id
+output "ebs_volume_id" {
+  description = "The ID of the EBS volume"
+  value       = module.ebs_volume.volume_id
 }
 
-output "s3_bucket_landing_raw_id" {
-  description = "ID of the landing raw S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_landing_raw"].id
+output "network_interface_id" {
+  description = "The ID of the network interface"
+  value       = module.network_interface.network_interface_id
+}
+
+output "iam_instance_profile_arn" {
+  description = "The ARN of the IAM instance profile"
+  value       = module.iam_instance_profile.instance_profile_arn
 }
