@@ -72,4 +72,5 @@ instance_root_block_device_delete_on_termination = true
 instance_root_block_device_volume_size           = 100
 instance_tags = {
   Name = "private-runner-do-not-delete"
+  App  = "Sun"
 }
