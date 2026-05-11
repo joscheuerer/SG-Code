@@ -1,52 +1,72 @@
-# non-prod-data-lake-infrastructure
+# private-runner-infrastructure
 
 ## Description
 
-Non-production data lake infrastructure including a Lambda execution IAM role and five S3 buckets forming a medallion architecture (landing, bronze, silver, gold, athena-results).
+EC2 private runner instance with IAM instance profile and key pair. This stack provisions a private EC2 runner instance in the `eu-central-1` region, along with its associated IAM instance profile and EC2 key pair.
 
-## Architecture Overview
+## Architecture
 
-This stack provisions:
-- **IAM Role**: A Lambda execution role (`non-prod-file-processor-lambda-role`) with inline policies granting access to S3, SQS, CloudWatch Logs, Athena, and Glue, plus the `AWSLambdaBasicExecutionRole` managed policy.
-- **S3 Buckets (Medallion Architecture)**:
-  - `non-prod-infra-landing-raw` — Landing zone for raw unvalidated ingestion
-  - `non-prod-infra-lake-bronze` — Bronze layer for raw validated permanent storage
-  - `non-prod-infra-lake-silver` — Silver layer for normalized Iceberg tables
-  - `non-prod-infra-lake-gold` — Gold layer for aggregated analytics
-  - `non-prod-infra-athena-results` — Athena query output storage
+```
+key_pair (aws_key_pair)
+    └── used by → instance (aws_instance)
+
+iam_instance_profile (aws_iam_instance_profile)
+    └── attached to → instance (aws_instance)
+
+instance (aws_instance)
+    ├── key_name        ← module.key_pair.key_name
+    └── iam_instance_profile ← module.iam_instance_profile.name
+```
 
 ## Module Overview
 
-| Module | Source | Description |
-|--------|--------|-------------|
-| `iam_role` | `./modules/iam_role` | Lambda execution IAM role with inline policies and managed policy attachments |
-| `s3_bucket` | `./modules/s3_bucket` | S3 bucket (instantiated once per entry in `s3_buckets` map) |
+| Module | Description | Primary Resource |
+|--------|-------------|-----------------|
+| `key_pair` | Manages the EC2 key pair for the private runner | `aws_key_pair` |
+| `iam_instance_profile` | Manages the IAM instance profile for the EC2 private runner | `aws_iam_instance_profile` |
+| `instance` | Manages the EC2 private runner instance | `aws_instance` |
 
 ## Variables Reference
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `region` | `string` | AWS region where resources will be managed |
-| `iam_role_name` | `string` | Friendly name of the IAM role |
-| `iam_role_path` | `string` | Path to the IAM role |
-| `iam_role_max_session_duration` | `number` | Maximum session duration in seconds |
-| `iam_role_assume_role_policy` | `string` | JSON policy document granting permission to assume the role |
-| `iam_role_managed_policy_arns` | `set(string)` | Set of managed policy ARNs to attach to the role |
-| `iam_role_inline_policies` | `map(object({...}))` | Map of inline policies to attach to the role |
-| `iam_role_tags` | `map(string)` | Tags to assign to the IAM role |
-| `s3_buckets` | `map(object({...}))` | Map of S3 bucket configurations (bucket name + tags) |
+| Variable | Type | Description | Default |
+|----------|------|-------------|---------|
+| `region` | `string` | AWS region to deploy resources in | `eu-central-1` |
+| `key_pair_key_name` | `string` | Name of the EC2 key pair | `private-runner-workshop` |
+| `key_pair_public_key` | `string` | Public key material (sensitive) | `""` |
+| `iam_instance_profile_name` | `string` | Name of the IAM instance profile | `ec2_private_runner_role` |
+| `iam_instance_profile_path` | `string` | Path for the IAM instance profile | `/` |
+| `iam_instance_profile_role` | `string` | IAM role name to associate | `ec2_private_runner_role` |
+| `instance_ami` | `string` | AMI ID for the EC2 instance | `ami-04f9a173520f395dd` |
+| `instance_instance_type` | `string` | EC2 instance type | `t2.large` |
+| `instance_availability_zone` | `string` | Availability zone | `eu-central-1a` |
+| `instance_subnet_id` | `string` | Subnet ID | `subnet-064f42dced8666a63` |
+| `instance_vpc_security_group_ids` | `list(string)` | Security group IDs | `["sg-0adb3e09fe11a19a1"]` |
+| `instance_source_dest_check` | `bool` | Enable source/destination check | `true` |
+| `instance_ebs_optimized` | `bool` | EBS optimized | `false` |
+| `instance_monitoring` | `bool` | Detailed monitoring | `false` |
+| `instance_tenancy` | `string` | Instance tenancy | `default` |
+| `instance_capacity_reservation_preference` | `string` | Capacity reservation preference | `open` |
+| `instance_cpu_core_count` | `number` | CPU core count | `2` |
+| `instance_cpu_threads_per_core` | `number` | Threads per CPU core | `1` |
+| `instance_metadata_http_endpoint` | `string` | Metadata HTTP endpoint | `enabled` |
+| `instance_metadata_http_protocol_ipv6` | `string` | Metadata IPv6 protocol | `disabled` |
+| `instance_metadata_http_put_response_hop_limit` | `number` | Metadata hop limit | `2` |
+| `instance_metadata_http_tokens` | `string` | IMDSv2 token requirement | `required` |
+| `instance_metadata_instance_metadata_tags` | `string` | Instance metadata tags | `disabled` |
+| `instance_enclave_options_enabled` | `bool` | Nitro Enclaves enabled | `false` |
+| `instance_root_block_device_delete_on_termination` | `bool` | Delete root volume on termination | `true` |
+| `instance_tags` | `map(string)` | Tags for the EC2 instance | `{App="Sun", Name="private-runner-do-not-delete"}` |
 
 ## Outputs Reference
 
 | Output | Description |
 |--------|-------------|
-| `iam_role_arn` | ARN of the Lambda execution IAM role |
-| `iam_role_name` | Name of the Lambda execution IAM role |
-| `s3_bucket_athena_results_id` | ID of the Athena results S3 bucket |
-| `s3_bucket_lake_bronze_id` | ID of the bronze layer S3 bucket |
-| `s3_bucket_lake_gold_id` | ID of the gold layer S3 bucket |
-| `s3_bucket_lake_silver_id` | ID of the silver layer S3 bucket |
-| `s3_bucket_landing_raw_id` | ID of the landing raw S3 bucket |
+| `instance_id` | ID of the EC2 instance |
+| `instance_arn` | ARN of the EC2 instance |
+| `instance_private_ip` | Private IP address of the EC2 instance |
+| `instance_public_ip` | Public IP address of the EC2 instance |
+| `iam_instance_profile_arn` | ARN of the IAM instance profile |
+| `key_pair_key_name` | Name of the EC2 key pair |
 
 ## Usage Instructions
 
@@ -54,16 +74,13 @@ This stack provisions:
 
 ```sh
 terraform init
-# or
-tofu init
 ```
 
-### 2. Import Existing Resources
+### 2. Import existing resources
 
 ```sh
-chmod +x imports.sh
 ./imports.sh terraform
-# or for OpenTofu:
+# or with OpenTofu:
 ./imports.sh tofu
 ```
 
@@ -73,10 +90,14 @@ chmod +x imports.sh
 terraform plan -var-file environments/sg.tfvars
 ```
 
-Verify that the plan shows **no changes** (zero drift) after import.
-
 ### 4. Apply
 
 ```sh
 terraform apply -var-file environments/sg.tfvars
 ```
+
+## Notes
+
+- The `key_pair_public_key` variable is sensitive. Provide the actual public key value before running `terraform apply` if managing the key pair's public key.
+- The EC2 instance (`i-08663188cc77a9249`) is tagged `private-runner-do-not-delete` — exercise caution before destroying.
+- Import must be run before plan/apply to avoid resource recreation.
