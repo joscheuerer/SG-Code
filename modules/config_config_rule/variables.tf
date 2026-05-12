@@ -1,8 +1,3 @@
-variable "region" {
-  type        = string
-  description = "AWS region where resources will be deployed"
-}
-
 variable "name" {
   type        = string
   description = "The name of the AWS Config rule"

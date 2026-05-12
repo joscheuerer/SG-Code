@@ -1,9 +1,9 @@
 output "rule_id" {
   description = "The ID of the Config rule"
-  value       = module.config_config_rule.rule_id
+  value       = aws_config_config_rule.this.rule_id
 }
 
 output "arn" {
   description = "The ARN of the Config rule"
-  value       = module.config_config_rule.arn
+  value       = aws_config_config_rule.this.arn
 }
