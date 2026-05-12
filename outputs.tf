@@ -1,34 +1,79 @@
-output "iam_role_arn" {
-  description = "ARN of the Lambda execution IAM role"
-  value       = module.iam_role.arn
+output "vpc_id" {
+  description = "The ID of the VPC"
+  value       = module.vpc.vpc_id
 }
 
-output "iam_role_name" {
-  description = "Name of the Lambda execution IAM role"
-  value       = module.iam_role.name
+output "subnet_basic_eks_public_eu_central_1b_id" {
+  description = "The ID of the basic-eks-public-eu-central-1b subnet"
+  value       = module.subnet["basic_eks_public_eu_central_1b"].subnet_id
 }
 
-output "s3_bucket_athena_results_id" {
-  description = "ID of the Athena results S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_athena_results"].id
+output "subnet_basic_eks_private_eu_central_1b_id" {
+  description = "The ID of the basic-eks-private-eu-central-1b subnet"
+  value       = module.subnet["basic_eks_private_eu_central_1b"].subnet_id
 }
 
-output "s3_bucket_lake_bronze_id" {
-  description = "ID of the bronze layer S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_lake_bronze"].id
+output "subnet_basic_eks_public_eu_central_1a_id" {
+  description = "The ID of the basic-eks-public-eu-central-1a subnet"
+  value       = module.subnet["basic_eks_public_eu_central_1a"].subnet_id
 }
 
-output "s3_bucket_lake_gold_id" {
-  description = "ID of the gold layer S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_lake_gold"].id
+output "subnet_basic_eks_private_eu_central_1c_id" {
+  description = "The ID of the basic-eks-private-eu-central-1c subnet"
+  value       = module.subnet["basic_eks_private_eu_central_1c"].subnet_id
 }
 
-output "s3_bucket_lake_silver_id" {
-  description = "ID of the silver layer S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_lake_silver"].id
+output "subnet_basic_eks_public_eu_central_1c_id" {
+  description = "The ID of the basic-eks-public-eu-central-1c subnet"
+  value       = module.subnet["basic_eks_public_eu_central_1c"].subnet_id
 }
 
-output "s3_bucket_landing_raw_id" {
-  description = "ID of the landing raw S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_landing_raw"].id
+output "subnet_basic_eks_private_eu_central_1a_id" {
+  description = "The ID of the basic-eks-private-eu-central-1a subnet"
+  value       = module.subnet["basic_eks_private_eu_central_1a"].subnet_id
+}
+
+output "internet_gateway_id" {
+  description = "The ID of the internet gateway"
+  value       = module.internet_gateway.internet_gateway_id
+}
+
+output "route_table_basic_eks_private_id" {
+  description = "The ID of the basic-eks-private route table"
+  value       = module.route_table["basic_eks_private"].route_table_id
+}
+
+output "route_table_basic_eks_public_id" {
+  description = "The ID of the basic-eks-public route table"
+  value       = module.route_table["basic_eks_public"].route_table_id
+}
+
+output "route_table_basic_eks_default_id" {
+  description = "The ID of the basic-eks-default route table"
+  value       = module.route_table["basic_eks_default"].route_table_id
+}
+
+output "security_group_basic_eks_cluster_id" {
+  description = "The ID of the basic-eks-cluster security group"
+  value       = module.security_group["basic_eks_cluster"].security_group_id
+}
+
+output "security_group_outpost_id" {
+  description = "The ID of the outpost security group"
+  value       = module.security_group["outpost"].security_group_id
+}
+
+output "security_group_basic_eks_node_id" {
+  description = "The ID of the basic-eks-node security group"
+  value       = module.security_group["basic_eks_node"].security_group_id
+}
+
+output "security_group_default_id" {
+  description = "The ID of the default security group"
+  value       = module.security_group["default"].security_group_id
+}
+
+output "network_acl_id" {
+  description = "The ID of the network ACL"
+  value       = module.network_acl.network_acl_id
 }
