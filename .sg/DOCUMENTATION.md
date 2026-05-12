@@ -1,52 +1,47 @@
-# non-prod-data-lake-infrastructure
+# pbb-network-stack
 
 ## Description
 
-Non-production data lake infrastructure including a Lambda execution IAM role and five S3 buckets forming a medallion architecture (landing, bronze, silver, gold, athena-results).
+Azure virtual network with subnets and network security groups for the pbb environment.
 
-## Architecture Overview
+## Stack Overview
 
-This stack provisions:
-- **IAM Role**: A Lambda execution role (`non-prod-file-processor-lambda-role`) with inline policies granting access to S3, SQS, CloudWatch Logs, Athena, and Glue, plus the `AWSLambdaBasicExecutionRole` managed policy.
-- **S3 Buckets (Medallion Architecture)**:
-  - `non-prod-infra-landing-raw` — Landing zone for raw unvalidated ingestion
-  - `non-prod-infra-lake-bronze` — Bronze layer for raw validated permanent storage
-  - `non-prod-infra-lake-silver` — Silver layer for normalized Iceberg tables
-  - `non-prod-infra-lake-gold` — Gold layer for aggregated analytics
-  - `non-prod-infra-athena-results` — Athena query output storage
+This stack provisions the following Azure networking resources:
+
+- **Virtual Network**: `pbbvnet` in resource group `pbb-rg` with address spaces `10.0.0.0/16` and `10.1.0.0/16`
+- **Network Security Groups**: `pbb-vm-nsg` and `private-runner-1-nsg` with configurable inline security rules
+- **Subnets**: `subnet1`, `subnet2`, and `subnet3` with optional service endpoints and delegations
 
 ## Module Overview
 
-| Module | Source | Description |
-|--------|--------|-------------|
-| `iam_role` | `./modules/iam_role` | Lambda execution IAM role with inline policies and managed policy attachments |
-| `s3_bucket` | `./modules/s3_bucket` | S3 bucket (instantiated once per entry in `s3_buckets` map) |
+| Module | Description | Source |
+|--------|-------------|--------|
+| `virtual_network` | Manages the pbbvnet virtual network | `./modules/virtual_network` |
+| `network_security_group` | Manages NSGs with optional inline security rules (for_each) | `./modules/network_security_group` |
+| `subnet` | Manages subnets within the virtual network (for_each) | `./modules/subnet` |
 
 ## Variables Reference
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `region` | `string` | AWS region where resources will be managed |
-| `iam_role_name` | `string` | Friendly name of the IAM role |
-| `iam_role_path` | `string` | Path to the IAM role |
-| `iam_role_max_session_duration` | `number` | Maximum session duration in seconds |
-| `iam_role_assume_role_policy` | `string` | JSON policy document granting permission to assume the role |
-| `iam_role_managed_policy_arns` | `set(string)` | Set of managed policy ARNs to attach to the role |
-| `iam_role_inline_policies` | `map(object({...}))` | Map of inline policies to attach to the role |
-| `iam_role_tags` | `map(string)` | Tags to assign to the IAM role |
-| `s3_buckets` | `map(object({...}))` | Map of S3 bucket configurations (bucket name + tags) |
+| Variable | Type | Description | Default |
+|----------|------|-------------|---------|
+| `region` | `string` | The Azure region to deploy resources into | — |
+| `virtual_network_name` | `string` | The name of the virtual network | — |
+| `virtual_network_resource_group_name` | `string` | The resource group name for the virtual network | — |
+| `virtual_network_address_space` | `list(string)` | The address space for the virtual network | — |
+| `virtual_network_tags` | `map(string)` | Tags to assign to the virtual network | `{}` |
+| `network_security_groups` | `map(object(...))` | Map of network security groups to create | `{}` |
+| `subnets` | `map(object(...))` | Map of subnets to create | `{}` |
 
 ## Outputs Reference
 
 | Output | Description |
 |--------|-------------|
-| `iam_role_arn` | ARN of the Lambda execution IAM role |
-| `iam_role_name` | Name of the Lambda execution IAM role |
-| `s3_bucket_athena_results_id` | ID of the Athena results S3 bucket |
-| `s3_bucket_lake_bronze_id` | ID of the bronze layer S3 bucket |
-| `s3_bucket_lake_gold_id` | ID of the gold layer S3 bucket |
-| `s3_bucket_lake_silver_id` | ID of the silver layer S3 bucket |
-| `s3_bucket_landing_raw_id` | ID of the landing raw S3 bucket |
+| `virtual_network_id` | The ID of the virtual network |
+| `pbb_vm_nsg_id` | The ID of the pbb-vm-nsg network security group |
+| `private_runner_1_nsg_id` | The ID of the private-runner-1-nsg network security group |
+| `subnet2_id` | The ID of subnet2 |
+| `subnet1_id` | The ID of subnet1 |
+| `subnet3_id` | The ID of subnet3 |
 
 ## Usage Instructions
 
@@ -54,16 +49,13 @@ This stack provisions:
 
 ```sh
 terraform init
-# or
-tofu init
 ```
 
 ### 2. Import Existing Resources
 
 ```sh
-chmod +x imports.sh
 ./imports.sh terraform
-# or for OpenTofu:
+# or with OpenTofu:
 ./imports.sh tofu
 ```
 
@@ -73,10 +65,14 @@ chmod +x imports.sh
 terraform plan -var-file environments/sg.tfvars
 ```
 
-Verify that the plan shows **no changes** (zero drift) after import.
-
 ### 4. Apply
 
 ```sh
 terraform apply -var-file environments/sg.tfvars
 ```
+
+## Notes
+
+- The `subnet` module calls depend on `module.virtual_network` for the virtual network name — Terraform will automatically order the operations correctly.
+- Security rules for NSGs are managed inline within the `azurerm_network_security_group` resource using dynamic blocks.
+- Subnet delegations and service endpoints are optional and controlled per-subnet via the `subnets` variable.

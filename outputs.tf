@@ -1,34 +1,29 @@
-output "iam_role_arn" {
-  description = "ARN of the Lambda execution IAM role"
-  value       = module.iam_role.arn
+output "virtual_network_id" {
+  description = "The ID of the virtual network"
+  value       = module.virtual_network.id
 }
 
-output "iam_role_name" {
-  description = "Name of the Lambda execution IAM role"
-  value       = module.iam_role.name
+output "pbb_vm_nsg_id" {
+  description = "The ID of the pbb-vm-nsg network security group"
+  value       = module.network_security_group["pbb_vm_nsg"].id
 }
 
-output "s3_bucket_athena_results_id" {
-  description = "ID of the Athena results S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_athena_results"].id
+output "private_runner_1_nsg_id" {
+  description = "The ID of the private-runner-1-nsg network security group"
+  value       = module.network_security_group["private_runner_1_nsg"].id
 }
 
-output "s3_bucket_lake_bronze_id" {
-  description = "ID of the bronze layer S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_lake_bronze"].id
+output "subnet2_id" {
+  description = "The ID of subnet2"
+  value       = module.subnet["subnet2"].id
 }
 
-output "s3_bucket_lake_gold_id" {
-  description = "ID of the gold layer S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_lake_gold"].id
+output "subnet1_id" {
+  description = "The ID of subnet1"
+  value       = module.subnet["subnet1"].id
 }
 
-output "s3_bucket_lake_silver_id" {
-  description = "ID of the silver layer S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_lake_silver"].id
-}
-
-output "s3_bucket_landing_raw_id" {
-  description = "ID of the landing raw S3 bucket"
-  value       = module.s3_bucket["non_prod_infra_landing_raw"].id
+output "subnet3_id" {
+  description = "The ID of subnet3"
+  value       = module.subnet["subnet3"].id
 }
