@@ -1,52 +1,39 @@
-# non-prod-data-lake-infrastructure
+# aws-config-rule-dynamodb-encrypted-kms
 
 ## Description
 
-Non-production data lake infrastructure including a Lambda execution IAM role and five S3 buckets forming a medallion architecture (landing, bronze, silver, gold, athena-results).
+AWS Config rule that checks whether Amazon DynamoDB tables are encrypted with AWS KMS. The rule evaluates DynamoDB tables and marks them as NON_COMPLIANT if they are not encrypted with AWS Key Management Service (KMS).
 
-## Architecture Overview
+## Stack Overview
 
-This stack provisions:
-- **IAM Role**: A Lambda execution role (`non-prod-file-processor-lambda-role`) with inline policies granting access to S3, SQS, CloudWatch Logs, Athena, and Glue, plus the `AWSLambdaBasicExecutionRole` managed policy.
-- **S3 Buckets (Medallion Architecture)**:
-  - `non-prod-infra-landing-raw` — Landing zone for raw unvalidated ingestion
-  - `non-prod-infra-lake-bronze` — Bronze layer for raw validated permanent storage
-  - `non-prod-infra-lake-silver` — Silver layer for normalized Iceberg tables
-  - `non-prod-infra-lake-gold` — Gold layer for aggregated analytics
-  - `non-prod-infra-athena-results` — Athena query output storage
+| Module | Description |
+|--------|-------------|
+| `config_config_rule` | Manages the AWS Config rule for DynamoDB KMS encryption compliance |
 
-## Module Overview
+## Module Details
 
-| Module | Source | Description |
-|--------|--------|-------------|
-| `iam_role` | `./modules/iam_role` | Lambda execution IAM role with inline policies and managed policy attachments |
-| `s3_bucket` | `./modules/s3_bucket` | S3 bucket (instantiated once per entry in `s3_buckets` map) |
+### config_config_rule (`./modules/config_config_rule`)
+
+Deploys an `aws_config_config_rule` resource that uses the AWS-managed rule `DYNAMODB_TABLE_ENCRYPTED_KMS` to evaluate whether DynamoDB tables are encrypted with KMS.
 
 ## Variables Reference
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `region` | `string` | AWS region where resources will be managed |
-| `iam_role_name` | `string` | Friendly name of the IAM role |
-| `iam_role_path` | `string` | Path to the IAM role |
-| `iam_role_max_session_duration` | `number` | Maximum session duration in seconds |
-| `iam_role_assume_role_policy` | `string` | JSON policy document granting permission to assume the role |
-| `iam_role_managed_policy_arns` | `set(string)` | Set of managed policy ARNs to attach to the role |
-| `iam_role_inline_policies` | `map(object({...}))` | Map of inline policies to attach to the role |
-| `iam_role_tags` | `map(string)` | Tags to assign to the IAM role |
-| `s3_buckets` | `map(object({...}))` | Map of S3 bucket configurations (bucket name + tags) |
+| Name | Type | Description | Default |
+|------|------|-------------|---------|
+| `region` | `string` | AWS region where resources will be deployed | — |
+| `name` | `string` | The name of the AWS Config rule | — |
+| `description` | `string` | Description of the AWS Config rule | — |
+| `evaluation_mode` | `string` | The mode of evaluation for the Config rule | — |
+| `compliance_resource_types` | `list(string)` | A list of resource types that trigger evaluation for the rule | — |
+| `source_owner` | `string` | Indicates whether AWS or the customer owns and manages the Config rule | — |
+| `source_identifier` | `string` | For AWS Config managed rules, the predefined identifier | — |
 
 ## Outputs Reference
 
-| Output | Description |
-|--------|-------------|
-| `iam_role_arn` | ARN of the Lambda execution IAM role |
-| `iam_role_name` | Name of the Lambda execution IAM role |
-| `s3_bucket_athena_results_id` | ID of the Athena results S3 bucket |
-| `s3_bucket_lake_bronze_id` | ID of the bronze layer S3 bucket |
-| `s3_bucket_lake_gold_id` | ID of the gold layer S3 bucket |
-| `s3_bucket_lake_silver_id` | ID of the silver layer S3 bucket |
-| `s3_bucket_landing_raw_id` | ID of the landing raw S3 bucket |
+| Name | Description |
+|------|-------------|
+| `rule_id` | The ID of the Config rule |
+| `arn` | The ARN of the Config rule |
 
 ## Usage Instructions
 
@@ -54,14 +41,11 @@ This stack provisions:
 
 ```sh
 terraform init
-# or
-tofu init
 ```
 
 ### 2. Import Existing Resources
 
 ```sh
-chmod +x imports.sh
 ./imports.sh terraform
 # or for OpenTofu:
 ./imports.sh tofu
@@ -73,10 +57,14 @@ chmod +x imports.sh
 terraform plan -var-file environments/sg.tfvars
 ```
 
-Verify that the plan shows **no changes** (zero drift) after import.
-
 ### 4. Apply
 
 ```sh
 terraform apply -var-file environments/sg.tfvars
 ```
+
+## Notes
+
+- This stack manages an existing AWS Config rule. The `imports.sh` script imports the rule into Terraform state before applying.
+- The rule uses the AWS-managed identifier `DYNAMODB_TABLE_ENCRYPTED_KMS` and evaluates resources of type `AWS::DynamoDB::Table`.
+- Evaluation mode is set to `DETECTIVE`, meaning the rule evaluates resources after configuration changes are recorded.
