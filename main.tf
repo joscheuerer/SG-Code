@@ -1,19 +1,33 @@
-module "iam_role" {
-  source = "./modules/iam_role"
+module "virtual_network" {
+  source = "./modules/virtual_network"
 
-  assume_role_policy   = var.iam_role_assume_role_policy
-  inline_policies      = var.iam_role_inline_policies
-  managed_policy_arns  = var.iam_role_managed_policy_arns
-  max_session_duration = var.iam_role_max_session_duration
-  name                 = var.iam_role_name
-  path                 = var.iam_role_path
-  tags                 = var.iam_role_tags
+  name                = var.virtual_network_name
+  resource_group_name = var.virtual_network_resource_group_name
+  location            = var.region
+  address_space       = var.virtual_network_address_space
+  tags                = var.virtual_network_tags
 }
 
-module "s3_bucket" {
-  source   = "./modules/s3_bucket"
-  for_each = var.s3_buckets
+module "network_security_group" {
+  source   = "./modules/network_security_group"
+  for_each = var.network_security_groups
 
-  bucket = each.value.bucket
-  tags   = each.value.tags
+  name                = each.value.name
+  resource_group_name = each.value.resource_group_name
+  location            = var.region
+  security_rules      = each.value.security_rules
+  tags                = each.value.tags
+}
+
+module "subnet" {
+  source   = "./modules/subnet"
+  for_each = var.subnets
+
+  name                              = each.value.name
+  resource_group_name               = each.value.resource_group_name
+  virtual_network_name              = module.virtual_network.name
+  address_prefixes                  = each.value.address_prefixes
+  delegation                        = each.value.delegation
+  service_endpoints                 = each.value.service_endpoints
+  private_endpoint_network_policies = each.value.private_endpoint_network_policies
 }

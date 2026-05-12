@@ -1,47 +1,65 @@
 variable "region" {
-  description = "AWS region where resources will be managed"
   type        = string
+  description = "The Azure region to deploy resources into"
 }
 
-variable "iam_role_name" {
-  description = "Friendly name of the IAM role"
+variable "virtual_network_name" {
   type        = string
+  description = "The name of the virtual network"
 }
 
-variable "iam_role_path" {
-  description = "Path to the IAM role"
+variable "virtual_network_resource_group_name" {
   type        = string
+  description = "The resource group name for the virtual network"
 }
 
-variable "iam_role_max_session_duration" {
-  description = "Maximum session duration in seconds"
-  type        = number
+variable "virtual_network_address_space" {
+  type        = list(string)
+  description = "The address space for the virtual network"
 }
 
-variable "iam_role_assume_role_policy" {
-  description = "JSON policy document granting permission to assume the role"
-  type        = string
-}
-
-variable "iam_role_managed_policy_arns" {
-  description = "Set of managed policy ARNs to attach to the role"
-  type        = set(string)
-}
-
-variable "iam_role_inline_policies" {
-  description = "Map of inline policies to attach to the role"
-  type        = map(object({ policy_name = string, policy_document = string }))
-}
-
-variable "iam_role_tags" {
-  description = "Tags to assign to the IAM role"
+variable "virtual_network_tags" {
   type        = map(string)
+  description = "Tags to assign to the virtual network"
+  default     = {}
 }
 
-variable "s3_buckets" {
-  description = "Map of S3 bucket configurations"
+variable "network_security_groups" {
   type = map(object({
-    bucket = string
-    tags   = map(string)
+    name                = string
+    resource_group_name = string
+    security_rules = list(object({
+      name                       = string
+      priority                   = number
+      direction                  = string
+      access                     = string
+      protocol                   = string
+      source_port_range          = string
+      destination_port_range     = string
+      source_address_prefix      = string
+      destination_address_prefix = string
+    }))
+    tags = map(string)
   }))
+  description = "Map of network security groups to create"
+  default     = {}
+}
+
+variable "subnets" {
+  type = map(object({
+    name                              = string
+    resource_group_name               = string
+    address_prefixes                  = list(string)
+    private_endpoint_network_policies = optional(string, "Enabled")
+    delegation = list(object({
+      name = string
+      service_delegation = object({
+        name    = string
+        actions = optional(list(string))
+      })
+    }))
+    service_endpoints = list(string)
+  }))
+  description = "Map of subnets to create"
+  default     = {}
 }
