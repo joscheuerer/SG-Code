@@ -1,100 +1,271 @@
-region = "eu-central-1"
+region               = "eu-central-1"
+vpc_cidr_block       = "10.0.0.0/16"
+vpc_instance_tenancy = "default"
+vpc_tags = {
+  Name = "basic-eks"
+}
 
-iam_role_name                = "non-prod-file-processor-lambda-role"
-iam_role_path                = "/"
-iam_role_max_session_duration = 3600
-iam_role_assume_role_policy  = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
-iam_role_managed_policy_arns = ["arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"]
-
-iam_role_inline_policies = {
-  lambda_s3_sqs_access = {
-    policy_name     = "LambdaS3SQSAccess"
-    policy_document = "{\"Statement\":[{\"Action\":[\"s3:GetObject\",\"s3:PutObject\",\"s3:DeleteObject\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:s3:::non-prod-infra-landing-raw/*\",\"arn:aws:s3:::non-prod-infra-lake-bronze/*\"]},{\"Action\":[\"s3:ListBucket\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:s3:::non-prod-infra-landing-raw\",\"arn:aws:s3:::non-prod-infra-lake-bronze\"]},{\"Action\":[\"sqs:ReceiveMessage\",\"sqs:DeleteMessage\",\"sqs:GetQueueAttributes\"],\"Effect\":\"Allow\",\"Resource\":\"arn:aws:sqs:eu-central-1:790543352839:non-prod-landing-ingest-queue\"},{\"Action\":[\"logs:CreateLogGroup\",\"logs:CreateLogStream\",\"logs:PutLogEvents\"],\"Effect\":\"Allow\",\"Resource\":\"arn:aws:logs:eu-central-1:790543352839:*\"}],\"Version\":\"2012-10-17\"}"
+subnets = {
+  basic_eks_public_eu_central_1b = {
+    cidr_block                      = "10.0.101.0/24"
+    availability_zone               = "eu-central-1b"
+    map_public_ip_on_launch         = false
+    assign_ipv6_address_on_creation = false
+    tags = {
+      "kubernetes.io/role/elb" = "1"
+      Name                     = "basic-eks-public-eu-central-1b"
+    }
   }
-  non_prod_file_processor_lambda_role_policy = {
-    policy_name     = "non-prod-file-processor-lambda-role-policy"
-    policy_document = "{\"Statement\":[{\"Action\":[\"logs:PutLogEvents\",\"logs:CreateLogStream\",\"logs:CreateLogGroup\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:logs:eu-central-1:790543352839:log-group:/aws/lambda/non-prod-*:*\",\"arn:aws:logs:eu-central-1:790543352839:log-group:/aws/lambda/non-prod-*\"],\"Sid\":\"CloudWatchLogs\"},{\"Action\":[\"s3:ListBucket\",\"s3:HeadObject\",\"s3:GetObjectVersion\",\"s3:GetObject\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:s3:::non-prod-infra-landing-raw/*\",\"arn:aws:s3:::non-prod-infra-landing-raw\",\"arn:aws:s3:::non-prod-infra-lake-silver/*\",\"arn:aws:s3:::non-prod-infra-lake-silver\",\"arn:aws:s3:::non-prod-infra-lake-gold/*\",\"arn:aws:s3:::non-prod-infra-lake-gold\",\"arn:aws:s3:::non-prod-infra-lake-bronze/*\",\"arn:aws:s3:::non-prod-infra-lake-bronze\",\"arn:aws:s3:::non-prod-infra-athena-results/*\",\"arn:aws:s3:::non-prod-infra-athena-results\"],\"Sid\":\"S3ReadAccess\"},{\"Action\":[\"s3:PutObjectAcl\",\"s3:PutObject\",\"s3:CopyObject\"],\"Effect\":\"Allow\",\"Resource\":\"arn:aws:s3:::non-prod-infra-lake-bronze/*\",\"Sid\":\"S3WriteBronze\"},{\"Action\":[\"s3:PutObject\",\"s3:DeleteObject\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:s3:::non-prod-infra-lake-silver/*\",\"arn:aws:s3:::non-prod-infra-lake-gold/*\"],\"Sid\":\"S3WriteSilverGold\"},{\"Action\":[\"sqs:ReceiveMessage\",\"sqs:GetQueueAttributes\",\"sqs:DeleteMessage\",\"sqs:ChangeMessageVisibility\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:sqs:eu-central-1:790543352839:non-prod-landing-ingest-queue\",\"arn:aws:sqs:eu-central-1:790543352839:non-prod-bronze-ingest-queue\"],\"Sid\":\"SQSAccess\"},{\"Action\":[\"athena:StopQueryExecution\",\"athena:StartQueryExecution\",\"athena:GetWorkGroup\",\"athena:GetQueryResults\",\"athena:GetQueryExecution\",\"athena:BatchGetQueryExecution\"],\"Effect\":\"Allow\",\"Resource\":\"arn:aws:athena:eu-central-1:790543352839:workgroup/non-prod-primary-workgroup\",\"Sid\":\"AthenaQueryExecution\"},{\"Action\":[\"glue:UpdateTable\",\"glue:GetTables\",\"glue:GetTable\",\"glue:GetPartitions\",\"glue:GetPartition\",\"glue:GetDatabases\",\"glue:GetDatabase\",\"glue:CreateTable\",\"glue:CreatePartition\",\"glue:BatchGetPartition\",\"glue:BatchCreatePartition\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:glue:eu-central-1:790543352839:table/non_prod_data_lake/*\",\"arn:aws:glue:eu-central-1:790543352839:database/non_prod_data_lake\",\"arn:aws:glue:eu-central-1:790543352839:catalog\"],\"Sid\":\"GlueCatalogAccess\"},{\"Action\":[\"s3:PutObject\",\"s3:ListBucketMultipartUploads\",\"s3:ListBucket\",\"s3:GetObject\",\"s3:GetBucketLocation\",\"s3:AbortMultipartUpload\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:s3:::non-prod-infra-athena-results/*\",\"arn:aws:s3:::non-prod-infra-athena-results\"],\"Sid\":\"S3WriteAthenaResults\"}],\"Version\":\"2012-10-17\"}"
+  basic_eks_private_eu_central_1b = {
+    cidr_block                      = "10.0.1.0/24"
+    availability_zone               = "eu-central-1b"
+    map_public_ip_on_launch         = false
+    assign_ipv6_address_on_creation = false
+    tags = {
+      "kubernetes.io/role/internal-elb" = "1"
+      Name                              = "basic-eks-private-eu-central-1b"
+    }
+  }
+  basic_eks_public_eu_central_1a = {
+    cidr_block                      = "10.0.100.0/24"
+    availability_zone               = "eu-central-1a"
+    map_public_ip_on_launch         = false
+    assign_ipv6_address_on_creation = false
+    tags = {
+      "kubernetes.io/role/elb" = "1"
+      Name                     = "basic-eks-public-eu-central-1a"
+    }
+  }
+  basic_eks_private_eu_central_1c = {
+    cidr_block                      = "10.0.2.0/24"
+    availability_zone               = "eu-central-1c"
+    map_public_ip_on_launch         = false
+    assign_ipv6_address_on_creation = false
+    tags = {
+      "kubernetes.io/role/internal-elb" = "1"
+      Name                              = "basic-eks-private-eu-central-1c"
+    }
+  }
+  basic_eks_public_eu_central_1c = {
+    cidr_block                      = "10.0.102.0/24"
+    availability_zone               = "eu-central-1c"
+    map_public_ip_on_launch         = false
+    assign_ipv6_address_on_creation = false
+    tags = {
+      "kubernetes.io/role/elb" = "1"
+      Name                     = "basic-eks-public-eu-central-1c"
+    }
+  }
+  basic_eks_private_eu_central_1a = {
+    cidr_block                      = "10.0.0.0/24"
+    availability_zone               = "eu-central-1a"
+    map_public_ip_on_launch         = false
+    assign_ipv6_address_on_creation = false
+    tags = {
+      "kubernetes.io/role/internal-elb" = "1"
+      Name                              = "basic-eks-private-eu-central-1a"
+    }
   }
 }
 
-iam_role_tags = {
-  DataRetention = "short-term"
-  Project       = "data-lake"
-  ManagedBy     = "terraform"
-  Architecture  = "medallion"
-  CostCenter    = "non-prod-data-lake"
-  Environment   = "non-prod"
-  Purpose       = "lambda-execution"
+internet_gateway_tags = {
+  Name = "basic-eks"
 }
 
-s3_buckets = {
-  non_prod_infra_athena_results = {
-    bucket = "non-prod-infra-athena-results"
+route_tables = {
+  basic_eks_private = {
+    routes = [
+      {
+        cidr_block     = "0.0.0.0/0"
+        nat_gateway_id = "nat-085a03c3986e2d06d"
+      }
+    ]
     tags = {
-      DataRetention      = "short-term"
-      Project            = "data-lake"
-      ManagedBy          = "terraform"
-      Architecture       = "medallion"
-      CostCenter         = "non-prod-data-lake"
-      DataClassification = "temporary"
-      Environment        = "non-prod"
-      Purpose            = "athena-query-outputs"
+      Name = "basic-eks-private"
     }
   }
-  non_prod_infra_lake_bronze = {
-    bucket = "non-prod-infra-lake-bronze"
+  basic_eks_public = {
+    routes = [
+      {
+        cidr_block = "0.0.0.0/0"
+        gateway_id = "igw-002f3e748d6007f83"
+      }
+    ]
     tags = {
-      DataRetention      = "short-term"
-      Project            = "data-lake"
-      ManagedBy          = "terraform"
-      Architecture       = "medallion"
-      CostCenter         = "non-prod-data-lake"
-      DataClassification = "raw-validated"
-      Environment        = "non-prod"
-      Purpose            = "raw-data-permanent-storage"
-      Layer              = "bronze"
+      Name = "basic-eks-public"
     }
   }
-  non_prod_infra_lake_gold = {
-    bucket = "non-prod-infra-lake-gold"
+  basic_eks_default = {
+    routes = []
     tags = {
-      DataRetention      = "short-term"
-      Project            = "data-lake"
-      ManagedBy          = "terraform"
-      Architecture       = "medallion"
-      CostCenter         = "non-prod-data-lake"
-      DataClassification = "business-ready"
-      Environment        = "non-prod"
-      Purpose            = "aggregated-analytics"
-      Layer              = "gold"
+      Name = "basic-eks-default"
     }
   }
-  non_prod_infra_lake_silver = {
-    bucket = "non-prod-infra-lake-silver"
+}
+
+security_groups = {
+  basic_eks_cluster = {
+    name        = "basic-eks-cluster-20250805072828562900000004"
+    description = "EKS cluster security group"
+    ingress = [
+      {
+        from_port       = 443
+        to_port         = 443
+        protocol        = "tcp"
+        security_groups = ["sg-0259cfa48eae0addd"]
+        description     = "Node groups to cluster API"
+      }
+    ]
+    egress = []
     tags = {
-      DataRetention      = "short-term"
-      Project            = "data-lake"
-      ManagedBy          = "terraform"
-      Architecture       = "medallion"
-      CostCenter         = "non-prod-data-lake"
-      DataClassification = "processed"
-      Environment        = "non-prod"
-      Purpose            = "normalized-iceberg-tables"
-      Layer              = "silver"
+      Name = "basic-eks-cluster"
     }
   }
-  non_prod_infra_landing_raw = {
-    bucket = "non-prod-infra-landing-raw"
+  outpost = {
+    name        = "outpost"
+    description = "Outpost instances - outbound only (Tailscale for inbound)"
+    ingress     = []
+    egress = [
+      {
+        from_port   = 0
+        to_port     = 0
+        protocol    = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+      }
+    ]
+    tags = {}
+  }
+  basic_eks_node = {
+    name        = "basic-eks-node-20250805072828562600000003"
+    description = "EKS node shared security group"
+    ingress = [
+      {
+        from_port       = 6443
+        to_port         = 6443
+        protocol        = "tcp"
+        security_groups = ["sg-011664c0def65d446"]
+        description     = "Cluster API to node 6443/tcp webhook"
+      },
+      {
+        from_port       = 9443
+        to_port         = 9443
+        protocol        = "tcp"
+        security_groups = ["sg-011664c0def65d446"]
+        description     = "Cluster API to node 9443/tcp webhook"
+      },
+      {
+        from_port   = 1025
+        to_port     = 65535
+        protocol    = "tcp"
+        self        = true
+        description = "Node to node ingress on ephemeral ports"
+      },
+      {
+        from_port       = 8443
+        to_port         = 8443
+        protocol        = "tcp"
+        security_groups = ["sg-011664c0def65d446"]
+        description     = "Cluster API to node 8443/tcp webhook"
+      },
+      {
+        from_port       = 10250
+        to_port         = 10250
+        protocol        = "tcp"
+        security_groups = ["sg-011664c0def65d446"]
+        description     = "Cluster API to node kubelets"
+      },
+      {
+        from_port   = 53
+        to_port     = 53
+        protocol    = "tcp"
+        self        = true
+        description = "Node to node CoreDNS"
+      },
+      {
+        from_port   = 53
+        to_port     = 53
+        protocol    = "udp"
+        self        = true
+        description = "Node to node CoreDNS UDP"
+      },
+      {
+        from_port       = 4443
+        to_port         = 4443
+        protocol        = "tcp"
+        security_groups = ["sg-011664c0def65d446"]
+        description     = "Cluster API to node 4443/tcp webhook"
+      },
+      {
+        from_port       = 443
+        to_port         = 443
+        protocol        = "tcp"
+        security_groups = ["sg-011664c0def65d446"]
+        description     = "Cluster API to node groups"
+      }
+    ]
+    egress = [
+      {
+        from_port   = 0
+        to_port     = 0
+        protocol    = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+        description = "Allow all egress"
+      }
+    ]
     tags = {
-      DataRetention      = "short-term"
-      Project            = "data-lake"
-      ManagedBy          = "terraform"
-      Architecture       = "medallion"
-      CostCenter         = "non-prod-data-lake"
-      DataClassification = "raw-unvalidated"
-      Environment        = "non-prod"
-      Purpose            = "temporary-ingestion-buffer"
-      Layer              = "landing"
+      "kubernetes.io/cluster/basic-eks" = "owned"
+      Name                              = "basic-eks-node"
     }
   }
+  default = {
+    name        = "default"
+    description = "default VPC security group"
+    ingress     = []
+    egress      = []
+    tags = {
+      Name = "basic-eks-default"
+    }
+  }
+}
+
+network_acl_egress = [
+  {
+    rule_no    = 100
+    action     = "allow"
+    protocol   = "-1"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 0
+    to_port    = 0
+  },
+  {
+    rule_no         = 101
+    action          = "allow"
+    protocol        = "-1"
+    ipv6_cidr_block = "::/0"
+    from_port       = 0
+    to_port         = 0
+  }
+]
+
+network_acl_ingress = [
+  {
+    rule_no    = 100
+    action     = "allow"
+    protocol   = "-1"
+    cidr_block = "0.0.0.0/0"
+    from_port  = 0
+    to_port    = 0
+  },
+  {
+    rule_no         = 101
+    action          = "allow"
+    protocol        = "-1"
+    ipv6_cidr_block = "::/0"
+    from_port       = 0
+    to_port         = 0
+  }
+]
+
+network_acl_tags = {
+  Name = "basic-eks-default"
 }
