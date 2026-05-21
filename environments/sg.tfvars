@@ -1,100 +1,72 @@
-region = "eu-central-1"
+region              = "eastus2"
+resource_group_name = "test"
+location            = "eastus2"
 
-iam_role_name                = "non-prod-file-processor-lambda-role"
-iam_role_path                = "/"
-iam_role_max_session_duration = 3600
-iam_role_assume_role_policy  = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
-iam_role_managed_policy_arns = ["arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"]
+public_ip_name              = "private-runner-sg-azure2-ip"
+public_ip_allocation_method = "Static"
+public_ip_sku               = "Standard"
+public_ip_zones             = ["1"]
 
-iam_role_inline_policies = {
-  lambda_s3_sqs_access = {
-    policy_name     = "LambdaS3SQSAccess"
-    policy_document = "{\"Statement\":[{\"Action\":[\"s3:GetObject\",\"s3:PutObject\",\"s3:DeleteObject\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:s3:::non-prod-infra-landing-raw/*\",\"arn:aws:s3:::non-prod-infra-lake-bronze/*\"]},{\"Action\":[\"s3:ListBucket\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:s3:::non-prod-infra-landing-raw\",\"arn:aws:s3:::non-prod-infra-lake-bronze\"]},{\"Action\":[\"sqs:ReceiveMessage\",\"sqs:DeleteMessage\",\"sqs:GetQueueAttributes\"],\"Effect\":\"Allow\",\"Resource\":\"arn:aws:sqs:eu-central-1:790543352839:non-prod-landing-ingest-queue\"},{\"Action\":[\"logs:CreateLogGroup\",\"logs:CreateLogStream\",\"logs:PutLogEvents\"],\"Effect\":\"Allow\",\"Resource\":\"arn:aws:logs:eu-central-1:790543352839:*\"}],\"Version\":\"2012-10-17\"}"
+nsg_name = "private-runner-sg-azure2-nsg"
+nsg_security_rules = [
+  {
+    name                       = "SSH"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+    access                     = "Allow"
+    priority                   = 300
+    direction                  = "Inbound"
+  },
+  {
+    name                       = "DenyAnyCustomAnyInbound"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+    access                     = "Deny"
+    priority                   = 310
+    direction                  = "Inbound"
   }
-  non_prod_file_processor_lambda_role_policy = {
-    policy_name     = "non-prod-file-processor-lambda-role-policy"
-    policy_document = "{\"Statement\":[{\"Action\":[\"logs:PutLogEvents\",\"logs:CreateLogStream\",\"logs:CreateLogGroup\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:logs:eu-central-1:790543352839:log-group:/aws/lambda/non-prod-*:*\",\"arn:aws:logs:eu-central-1:790543352839:log-group:/aws/lambda/non-prod-*\"],\"Sid\":\"CloudWatchLogs\"},{\"Action\":[\"s3:ListBucket\",\"s3:HeadObject\",\"s3:GetObjectVersion\",\"s3:GetObject\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:s3:::non-prod-infra-landing-raw/*\",\"arn:aws:s3:::non-prod-infra-landing-raw\",\"arn:aws:s3:::non-prod-infra-lake-silver/*\",\"arn:aws:s3:::non-prod-infra-lake-silver\",\"arn:aws:s3:::non-prod-infra-lake-gold/*\",\"arn:aws:s3:::non-prod-infra-lake-gold\",\"arn:aws:s3:::non-prod-infra-lake-bronze/*\",\"arn:aws:s3:::non-prod-infra-lake-bronze\",\"arn:aws:s3:::non-prod-infra-athena-results/*\",\"arn:aws:s3:::non-prod-infra-athena-results\"],\"Sid\":\"S3ReadAccess\"},{\"Action\":[\"s3:PutObjectAcl\",\"s3:PutObject\",\"s3:CopyObject\"],\"Effect\":\"Allow\",\"Resource\":\"arn:aws:s3:::non-prod-infra-lake-bronze/*\",\"Sid\":\"S3WriteBronze\"},{\"Action\":[\"s3:PutObject\",\"s3:DeleteObject\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:s3:::non-prod-infra-lake-silver/*\",\"arn:aws:s3:::non-prod-infra-lake-gold/*\"],\"Sid\":\"S3WriteSilverGold\"},{\"Action\":[\"sqs:ReceiveMessage\",\"sqs:GetQueueAttributes\",\"sqs:DeleteMessage\",\"sqs:ChangeMessageVisibility\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:sqs:eu-central-1:790543352839:non-prod-landing-ingest-queue\",\"arn:aws:sqs:eu-central-1:790543352839:non-prod-bronze-ingest-queue\"],\"Sid\":\"SQSAccess\"},{\"Action\":[\"athena:StopQueryExecution\",\"athena:StartQueryExecution\",\"athena:GetWorkGroup\",\"athena:GetQueryResults\",\"athena:GetQueryExecution\",\"athena:BatchGetQueryExecution\"],\"Effect\":\"Allow\",\"Resource\":\"arn:aws:athena:eu-central-1:790543352839:workgroup/non-prod-primary-workgroup\",\"Sid\":\"AthenaQueryExecution\"},{\"Action\":[\"glue:UpdateTable\",\"glue:GetTables\",\"glue:GetTable\",\"glue:GetPartitions\",\"glue:GetPartition\",\"glue:GetDatabases\",\"glue:GetDatabase\",\"glue:CreateTable\",\"glue:CreatePartition\",\"glue:BatchGetPartition\",\"glue:BatchCreatePartition\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:glue:eu-central-1:790543352839:table/non_prod_data_lake/*\",\"arn:aws:glue:eu-central-1:790543352839:database/non_prod_data_lake\",\"arn:aws:glue:eu-central-1:790543352839:catalog\"],\"Sid\":\"GlueCatalogAccess\"},{\"Action\":[\"s3:PutObject\",\"s3:ListBucketMultipartUploads\",\"s3:ListBucket\",\"s3:GetObject\",\"s3:GetBucketLocation\",\"s3:AbortMultipartUpload\"],\"Effect\":\"Allow\",\"Resource\":[\"arn:aws:s3:::non-prod-infra-athena-results/*\",\"arn:aws:s3:::non-prod-infra-athena-results\"],\"Sid\":\"S3WriteAthenaResults\"}],\"Version\":\"2012-10-17\"}"
-  }
-}
+]
 
-iam_role_tags = {
-  DataRetention = "short-term"
-  Project       = "data-lake"
-  ManagedBy     = "terraform"
-  Architecture  = "medallion"
-  CostCenter    = "non-prod-data-lake"
-  Environment   = "non-prod"
-  Purpose       = "lambda-execution"
-}
+nic_name                          = "private-runner-sg-azure2113_z1"
+nic_accelerated_networking_enabled = false
+nic_ip_forwarding_enabled         = false
+nic_ip_configuration_name         = "ipconfig1"
+nic_subnet_id                     = "/subscriptions/a97621d8-9158-4681-81b6-38b1222afba4/resourceGroups/test/providers/Microsoft.Network/virtualNetworks/private-runner-sg-azure2-vnet/subnets/default"
+nic_private_ip_address_allocation = "Dynamic"
+nic_private_ip_address_version    = "IPv4"
+nic_ip_configuration_primary      = true
 
-s3_buckets = {
-  non_prod_infra_athena_results = {
-    bucket = "non-prod-infra-athena-results"
-    tags = {
-      DataRetention      = "short-term"
-      Project            = "data-lake"
-      ManagedBy          = "terraform"
-      Architecture       = "medallion"
-      CostCenter         = "non-prod-data-lake"
-      DataClassification = "temporary"
-      Environment        = "non-prod"
-      Purpose            = "athena-query-outputs"
-    }
-  }
-  non_prod_infra_lake_bronze = {
-    bucket = "non-prod-infra-lake-bronze"
-    tags = {
-      DataRetention      = "short-term"
-      Project            = "data-lake"
-      ManagedBy          = "terraform"
-      Architecture       = "medallion"
-      CostCenter         = "non-prod-data-lake"
-      DataClassification = "raw-validated"
-      Environment        = "non-prod"
-      Purpose            = "raw-data-permanent-storage"
-      Layer              = "bronze"
-    }
-  }
-  non_prod_infra_lake_gold = {
-    bucket = "non-prod-infra-lake-gold"
-    tags = {
-      DataRetention      = "short-term"
-      Project            = "data-lake"
-      ManagedBy          = "terraform"
-      Architecture       = "medallion"
-      CostCenter         = "non-prod-data-lake"
-      DataClassification = "business-ready"
-      Environment        = "non-prod"
-      Purpose            = "aggregated-analytics"
-      Layer              = "gold"
-    }
-  }
-  non_prod_infra_lake_silver = {
-    bucket = "non-prod-infra-lake-silver"
-    tags = {
-      DataRetention      = "short-term"
-      Project            = "data-lake"
-      ManagedBy          = "terraform"
-      Architecture       = "medallion"
-      CostCenter         = "non-prod-data-lake"
-      DataClassification = "processed"
-      Environment        = "non-prod"
-      Purpose            = "normalized-iceberg-tables"
-      Layer              = "silver"
-    }
-  }
-  non_prod_infra_landing_raw = {
-    bucket = "non-prod-infra-landing-raw"
-    tags = {
-      DataRetention      = "short-term"
-      Project            = "data-lake"
-      ManagedBy          = "terraform"
-      Architecture       = "medallion"
-      CostCenter         = "non-prod-data-lake"
-      DataClassification = "raw-unvalidated"
-      Environment        = "non-prod"
-      Purpose            = "temporary-ingestion-buffer"
-      Layer              = "landing"
-    }
-  }
-}
+managed_disk_name                 = "private-runner-sg-azure2_OsDisk_1_17de18156ae54efd9060319f1d9c535e"
+managed_disk_storage_account_type = "Standard_LRS"
+managed_disk_create_option        = "FromImage"
+managed_disk_size_gb              = 30
+managed_disk_os_type              = "Linux"
+managed_disk_hyper_v_generation   = "V2"
+managed_disk_trusted_launch_enabled = true
+managed_disk_zone                 = "1"
+managed_disk_image_reference_id   = "/Subscriptions/a97621d8-9158-4681-81b6-38b1222afba4/Providers/Microsoft.Compute/Locations/eastus2/Publishers/canonical/ArtifactTypes/VMImage/Offers/0001-com-ubuntu-server-focal/Skus/20_04-lts-gen2/Versions/20.04.202307140"
+
+vm_name                            = "private-runner-sg-azure2"
+vm_size                            = "Standard_B2s"
+vm_zones                           = ["1"]
+vm_tags                            = { App = "Mars" }
+vm_image_publisher                 = "canonical"
+vm_image_offer                     = "0001-com-ubuntu-server-focal"
+vm_image_sku                       = "20_04-lts-gen2"
+vm_image_version                   = "latest"
+vm_os_disk_name                    = "private-runner-sg-azure2_OsDisk_1_17de18156ae54efd9060319f1d9c535e"
+vm_os_disk_caching                 = "ReadWrite"
+vm_os_disk_create_option           = "FromImage"
+vm_os_disk_managed_disk_type       = "Standard_LRS"
+vm_os_type                         = "Linux"
+vm_computer_name                   = "private-runner-sg-azure2"
+vm_admin_username                  = "azueruser"
+vm_disable_password_authentication = false
+vm_boot_diagnostics_enabled        = true
+vm_boot_diagnostics_storage_uri    = ""

@@ -1,52 +1,86 @@
-# non-prod-data-lake-infrastructure
+# private-runner-sg-azure2-stack
 
 ## Description
 
-Non-production data lake infrastructure including a Lambda execution IAM role and five S3 buckets forming a medallion architecture (landing, bronze, silver, gold, athena-results).
+Azure infrastructure for a private runner VM with managed disk, network interface, network security group, and public IP. All resources are deployed in the `eastus2` region within the `test` resource group.
 
 ## Architecture Overview
 
-This stack provisions:
-- **IAM Role**: A Lambda execution role (`non-prod-file-processor-lambda-role`) with inline policies granting access to S3, SQS, CloudWatch Logs, Athena, and Glue, plus the `AWSLambdaBasicExecutionRole` managed policy.
-- **S3 Buckets (Medallion Architecture)**:
-  - `non-prod-infra-landing-raw` — Landing zone for raw unvalidated ingestion
-  - `non-prod-infra-lake-bronze` — Bronze layer for raw validated permanent storage
-  - `non-prod-infra-lake-silver` — Silver layer for normalized Iceberg tables
-  - `non-prod-infra-lake-gold` — Gold layer for aggregated analytics
-  - `non-prod-infra-athena-results` — Athena query output storage
+```
+public_ip  ──────────────────────────────────────────┐
+                                                      ▼
+network_security_group          network_interface (uses public_ip.id)
+                                        │
+                                        ▼
+                              virtual_machine
+                                        │
+                              managed_disk (standalone OS disk)
+```
 
 ## Module Overview
 
-| Module | Source | Description |
-|--------|--------|-------------|
-| `iam_role` | `./modules/iam_role` | Lambda execution IAM role with inline policies and managed policy attachments |
-| `s3_bucket` | `./modules/s3_bucket` | S3 bucket (instantiated once per entry in `s3_buckets` map) |
+| Module | Description | Primary Resource |
+|--------|-------------|-----------------|
+| `public_ip` | Public IP address for the runner VM | `azurerm_public_ip` |
+| `network_security_group` | NSG with SSH allow and deny-all inbound rules | `azurerm_network_security_group` |
+| `network_interface` | NIC wired to subnet and public IP | `azurerm_network_interface` |
+| `managed_disk` | Standalone OS managed disk | `azurerm_managed_disk` |
+| `virtual_machine` | Private runner Linux VM | `azurerm_virtual_machine` |
 
 ## Variables Reference
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `region` | `string` | AWS region where resources will be managed |
-| `iam_role_name` | `string` | Friendly name of the IAM role |
-| `iam_role_path` | `string` | Path to the IAM role |
-| `iam_role_max_session_duration` | `number` | Maximum session duration in seconds |
-| `iam_role_assume_role_policy` | `string` | JSON policy document granting permission to assume the role |
-| `iam_role_managed_policy_arns` | `set(string)` | Set of managed policy ARNs to attach to the role |
-| `iam_role_inline_policies` | `map(object({...}))` | Map of inline policies to attach to the role |
-| `iam_role_tags` | `map(string)` | Tags to assign to the IAM role |
-| `s3_buckets` | `map(object({...}))` | Map of S3 bucket configurations (bucket name + tags) |
+| Variable | Type | Description | Default |
+|----------|------|-------------|---------|
+| `region` | `string` | Azure region for the provider | — |
+| `resource_group_name` | `string` | Name of the resource group | — |
+| `location` | `string` | Azure region where resources exist | — |
+| `public_ip_name` | `string` | Name of the public IP resource | — |
+| `public_ip_allocation_method` | `string` | Allocation method (Static/Dynamic) | — |
+| `public_ip_sku` | `string` | SKU of the public IP | — |
+| `public_ip_zones` | `list(string)` | Availability zones for the public IP | — |
+| `nsg_name` | `string` | Name of the NSG | — |
+| `nsg_security_rules` | `list(object)` | Security rules for the NSG | — |
+| `nic_name` | `string` | Name of the NIC | — |
+| `nic_accelerated_networking_enabled` | `bool` | Enable accelerated networking | — |
+| `nic_ip_forwarding_enabled` | `bool` | Enable IP forwarding | — |
+| `nic_ip_configuration_name` | `string` | Name of the IP configuration | — |
+| `nic_subnet_id` | `string` | Subnet ID for the NIC | — |
+| `nic_private_ip_address_allocation` | `string` | Private IP allocation method | — |
+| `nic_private_ip_address_version` | `string` | IP version (IPv4/IPv6) | — |
+| `nic_ip_configuration_primary` | `bool` | Is primary IP configuration | — |
+| `managed_disk_name` | `string` | Name of the managed disk | — |
+| `managed_disk_storage_account_type` | `string` | Storage account type | — |
+| `managed_disk_create_option` | `string` | Disk creation method | — |
+| `managed_disk_size_gb` | `number` | Disk size in GB | — |
+| `managed_disk_os_type` | `string` | OS type on the disk | — |
+| `vm_name` | `string` | Name of the VM | — |
+| `vm_size` | `string` | VM size | — |
+| `vm_zones` | `list(string)` | Availability zones for the VM | — |
+| `vm_tags` | `map(string)` | Tags for the VM | — |
+| `vm_image_publisher` | `string` | Image publisher | — |
+| `vm_image_offer` | `string` | Image offer | — |
+| `vm_image_sku` | `string` | Image SKU | — |
+| `vm_image_version` | `string` | Image version | — |
+| `vm_os_disk_name` | `string` | OS disk name | — |
+| `vm_os_disk_caching` | `string` | OS disk caching | — |
+| `vm_os_disk_create_option` | `string` | OS disk create option | — |
+| `vm_os_disk_managed_disk_type` | `string` | OS disk managed disk type | — |
+| `vm_os_type` | `string` | OS type | — |
+| `vm_computer_name` | `string` | Computer name | — |
+| `vm_admin_username` | `string` | Admin username | — |
+| `vm_disable_password_authentication` | `bool` (sensitive) | Disable password auth | — |
+| `vm_boot_diagnostics_enabled` | `bool` | Enable boot diagnostics | — |
+| `vm_boot_diagnostics_storage_uri` | `string` | Boot diagnostics storage URI | — |
 
 ## Outputs Reference
 
 | Output | Description |
 |--------|-------------|
-| `iam_role_arn` | ARN of the Lambda execution IAM role |
-| `iam_role_name` | Name of the Lambda execution IAM role |
-| `s3_bucket_athena_results_id` | ID of the Athena results S3 bucket |
-| `s3_bucket_lake_bronze_id` | ID of the bronze layer S3 bucket |
-| `s3_bucket_lake_gold_id` | ID of the gold layer S3 bucket |
-| `s3_bucket_lake_silver_id` | ID of the silver layer S3 bucket |
-| `s3_bucket_landing_raw_id` | ID of the landing raw S3 bucket |
+| `public_ip_id` | The ID of the public IP |
+| `nsg_id` | The ID of the network security group |
+| `nic_id` | The ID of the network interface |
+| `managed_disk_id` | The ID of the managed disk |
+| `virtual_machine_id` | The ID of the virtual machine |
 
 ## Usage Instructions
 
@@ -54,16 +88,13 @@ This stack provisions:
 
 ```sh
 terraform init
-# or
-tofu init
 ```
 
-### 2. Import Existing Resources
+### 2. Import existing resources
 
 ```sh
-chmod +x imports.sh
 ./imports.sh terraform
-# or for OpenTofu:
+# or with OpenTofu:
 ./imports.sh tofu
 ```
 
@@ -73,10 +104,14 @@ chmod +x imports.sh
 terraform plan -var-file environments/sg.tfvars
 ```
 
-Verify that the plan shows **no changes** (zero drift) after import.
-
 ### 4. Apply
 
 ```sh
 terraform apply -var-file environments/sg.tfvars
 ```
+
+## Notes
+
+- `vm_disable_password_authentication` is marked sensitive. Set it in a `.tfvars` file or via environment variable `TF_VAR_vm_disable_password_authentication`.
+- The NIC is wired to the public IP via cross-module output: `module.public_ip.id`.
+- The VM's `network_interface_ids` is constructed at root level from `module.network_interface.id`.
