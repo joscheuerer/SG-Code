@@ -1,8 +1,3 @@
-variable "region" {
-  description = "AWS region where resources will be managed"
-  type        = string
-}
-
 variable "name" {
   description = "Name of the ECR repository"
   type        = string
