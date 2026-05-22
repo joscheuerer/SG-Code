@@ -1,24 +1,19 @@
-output "instance_id" {
-  description = "ID of the EC2 instance"
-  value       = module.instance.id
+output "repository_url" {
+  description = "The URL of the ECR repository"
+  value       = module.ecr_repository.repository_url
 }
 
-output "instance_arn" {
-  description = "ARN of the EC2 instance"
-  value       = module.instance.arn
+output "registry_id" {
+  description = "The registry ID where the repository was created"
+  value       = module.ecr_repository.registry_id
 }
 
-output "instance_private_ip" {
-  description = "Private IP address of the EC2 instance"
-  value       = module.instance.private_ip
+output "arn" {
+  description = "Full ARN of the ECR repository"
+  value       = module.ecr_repository.arn
 }
 
-output "iam_instance_profile_arn" {
-  description = "ARN of the IAM instance profile"
-  value       = module.iam_instance_profile.arn
-}
-
-output "key_pair_key_name" {
-  description = "Name of the key pair"
-  value       = module.key_pair.key_name
+output "name" {
+  description = "Name of the ECR repository"
+  value       = module.ecr_repository.name
 }
