@@ -1,4 +1,3 @@
-output "key_name" {
-  description = "Name of the key pair"
-  value       = aws_key_pair.this.key_name
+output "key_pair_id" {
+  value = aws_key_pair.this.id
 }
