@@ -1,10 +1,14 @@
 variable "key_name" {
-  type        = string
-  description = "Name of the key pair"
+  type = string
 }
 
 variable "public_key" {
-  type        = string
-  description = "Public key material"
-  sensitive   = true
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "tags" {
+  type    = map(string)
+  default = {}
 }
