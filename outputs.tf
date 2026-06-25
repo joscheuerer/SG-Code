@@ -1,19 +1,14 @@
-output "repository_url" {
-  description = "The URL of the ECR repository"
-  value       = module.ecr_repository.repository_url
+output "network_interface_id" {
+  description = "The ID of the Network Interface"
+  value       = module.network_interface.id
 }
 
-output "registry_id" {
-  description = "The registry ID where the repository was created"
-  value       = module.ecr_repository.registry_id
+output "network_interface_mac_address" {
+  description = "The MAC address of the Network Interface"
+  value       = module.network_interface.mac_address
 }
 
-output "arn" {
-  description = "Full ARN of the ECR repository"
-  value       = module.ecr_repository.arn
-}
-
-output "name" {
-  description = "Name of the ECR repository"
-  value       = module.ecr_repository.name
+output "network_interface_private_ip_address" {
+  description = "The first private IP address of the Network Interface"
+  value       = module.network_interface.private_ip_address
 }
