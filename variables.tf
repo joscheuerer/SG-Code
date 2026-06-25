@@ -1,29 +1,26 @@
-variable "region" {
-  description = "AWS region where resources will be managed"
+variable "subscription_id" {
+  description = "Azure subscription ID"
   type        = string
 }
 
-variable "name" {
-  description = "Name of the ECR repository"
-  type        = string
-}
-
-variable "image_tag_mutability" {
-  description = "The tag mutability setting for the repository. Must be one of MUTABLE, IMMUTABLE, IMMUTABLE_WITH_EXCLUSION, or MUTABLE_WITH_EXCLUSION"
-  type        = string
-}
-
-variable "encryption_type" {
-  description = "The encryption type to use for the repository. Valid values are AES256 or KMS"
-  type        = string
-}
-
-variable "scan_on_push" {
-  description = "Indicates whether images are scanned after being pushed to the repository"
-  type        = bool
-}
-
-variable "tags" {
-  description = "A map of tags to assign to the repository"
-  type        = map(string)
+variable "network_interfaces" {
+  description = "Map of Azure network interfaces to manage"
+  type = map(object({
+    name                           = string
+    resource_group_name            = string
+    location                       = string
+    accelerated_networking_enabled = optional(bool, false)
+    ip_forwarding_enabled          = optional(bool, false)
+    tags                           = optional(map(string), {})
+    ip_configurations = list(object({
+      name                          = string
+      private_ip_address            = string
+      private_ip_address_version    = optional(string, "IPv4")
+      private_ip_address_allocation = string
+      primary                       = optional(bool, false)
+      public_ip_address_id          = optional(string, null)
+      subnet_id                     = string
+    }))
+  }))
+  default = {}
 }
