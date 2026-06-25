@@ -1,47 +1,41 @@
-# sage-agent-ecr
+# arunim-host-0-nic-stack
 
 ## Description
 
-ECR repository for the sage-agent container image with lifecycle policy and Lambda access repository policy.
+Azure Network Interface for arunim-host-0 with static private IP and public IP association.
 
-## Stack Overview
+## Module Overview
 
-| Component | Details |
-|-----------|---------|
-| Stack Name | sage-agent-ecr |
-| Region | eu-central-1 |
-| Provider | AWS (hashicorp/aws) |
-
-## Modules
-
-### `ecr_repository` (`./modules/ecr_repository`)
-
-Manages the sage-agent ECR repository including image scanning, encryption, and tag mutability settings.
-
-**Resources:**
-| Resource Type | Logical Name | Description |
-|---------------|--------------|-------------|
-| `aws_ecr_repository` | `this` | The ECR repository for the sage-agent container image |
+| Module | Description |
+|--------|-------------|
+| `network_interface` | Manages the Azure Network Interface `arunim-host-0-nic` |
 
 ## Variables Reference
 
 | Name | Type | Description | Default |
 |------|------|-------------|---------|
-| `region` | `string` | AWS region where resources will be managed | `"eu-central-1"` |
-| `name` | `string` | Name of the ECR repository | `"sage-agent"` |
-| `image_tag_mutability` | `string` | The tag mutability setting for the repository | `"MUTABLE"` |
-| `encryption_type` | `string` | The encryption type to use for the repository | `"AES256"` |
-| `scan_on_push` | `bool` | Indicates whether images are scanned after being pushed | `true` |
-| `tags` | `map(string)` | A map of tags to assign to the repository | See tfvars |
+| `region` | `string` | The Azure region for the provider | — |
+| `name` | `string` | The name of the Network Interface | — |
+| `location` | `string` | The Azure region where the Network Interface should exist | — |
+| `resource_group_name` | `string` | The name of the Resource Group | — |
+| `accelerated_networking_enabled` | `bool` | Should Accelerated Networking be enabled | — |
+| `ip_forwarding_enabled` | `bool` | Should IP Forwarding be enabled | — |
+| `tags` | `map(string)` | A mapping of tags to assign to the resource | — |
+| `ip_configuration_name` | `string` | Name used for the IP Configuration | — |
+| `private_ip_address_version` | `string` | The IP Version to use for the IP Configuration | — |
+| `private_ip_address_allocation` | `string` | The allocation method used for the Private IP Address | — |
+| `private_ip_address` | `string` | The static private IP address | — |
+| `subnet_id` | `string` | The ID of the Subnet where this Network Interface should be located | — |
+| `public_ip_address_id` | `string` | The ID of the Public IP Address to associate with this NIC | — |
+| `ip_configuration_primary` | `bool` | Is this the Primary IP Configuration | — |
 
 ## Outputs Reference
 
 | Name | Description |
 |------|-------------|
-| `repository_url` | The URL of the ECR repository |
-| `registry_id` | The registry ID where the repository was created |
-| `arn` | Full ARN of the ECR repository |
-| `name` | Name of the ECR repository |
+| `network_interface_id` | The ID of the Network Interface |
+| `network_interface_mac_address` | The MAC address of the Network Interface |
+| `network_interface_private_ip_address` | The first private IP address of the Network Interface |
 
 ## Usage Instructions
 
@@ -51,13 +45,12 @@ Manages the sage-agent ECR repository including image scanning, encryption, and 
 terraform init
 ```
 
-### 2. Import Existing Resources
+### 2. Import existing resources
 
 ```sh
-chmod +x imports.sh
-./imports.sh terraform
-# or for OpenTofu:
-./imports.sh tofu
+sh imports.sh terraform
+# or with OpenTofu:
+sh imports.sh tofu
 ```
 
 ### 3. Plan

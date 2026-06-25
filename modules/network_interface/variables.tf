@@ -1,8 +1,3 @@
-variable "region" {
-  type        = string
-  description = "The Azure region for the provider"
-}
-
 variable "name" {
   type        = string
   description = "The name of the Network Interface"
