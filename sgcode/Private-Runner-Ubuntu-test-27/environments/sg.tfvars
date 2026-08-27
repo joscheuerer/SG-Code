@@ -18,22 +18,22 @@ instances = {
     }
     root_block_device = {
       volume_type           = "gp3"
-      volume_size           = 64
+      volume_size           = 6400
       delete_on_termination = false
       encrypted             = false
     }
     tags = {
-      Name = "taher-private-runner-ubuntu"
+      Name = "taher-private-runner-ubuntu-new"
     }
   }
 }
 
 ebs_volumes = {
   vol_072212cd519ee269f = {
-    availability_zone    = "eu-central-1a"
+    availability_zone    = "eu-central-1b"
     size                 = 32
     type                 = "gp3"
-    iops                 = 3000
+    iops                 = 4044
     throughput           = 125
     encrypted            = false
     multi_attach_enabled = false
