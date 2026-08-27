@@ -2,7 +2,7 @@
 
 # EC2 instances
 module "instance" {
-  source   = "./modules/instance"
+  source   = "./modules/instance-not-really"
   for_each = var.instances
 
   ami                    = each.value.ami
