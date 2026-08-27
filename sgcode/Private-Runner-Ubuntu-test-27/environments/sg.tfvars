@@ -7,7 +7,7 @@ instances = {
     key_name               = "taher-private-runner"
     subnet_id              = "subnet-072669658da496c4a"
     vpc_security_group_ids = ["sg-092a5ff991a0802bc"]
-    source_dest_check      = true
+    source_dest_check      = false
     tenancy                = "default"
     ebs_optimized          = false
     metadata_options = {
@@ -18,8 +18,8 @@ instances = {
     }
     root_block_device = {
       volume_type           = "gp3"
-      volume_size           = 32
-      delete_on_termination = true
+      volume_size           = 64
+      delete_on_termination = false
       encrypted             = false
     }
     tags = {
