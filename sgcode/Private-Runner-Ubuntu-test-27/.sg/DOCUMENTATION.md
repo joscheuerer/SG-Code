@@ -373,4 +373,3 @@ The reconciliation result was **"No changes"** — the Terraform state matches t
 ### Absence of a `terraform` Block Backend Configuration
 
 The code does not include a `terraform { backend = ... }` block. State is stored locally in `terraform.tfstate` by default. For team/production use, configure a remote backend (e.g., S3, Terraform Cloud) by adding a `terraform` block or by using the `-backend-config` flag during `init`.
-
