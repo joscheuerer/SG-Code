@@ -1,22 +1,14 @@
-module "policy_assignment" {
-  source   = "./modules/policy_assignment"
-  for_each = var.policy_assignments
+module "athena_workgroup" {
+  source   = "./modules/athena_workgroup"
+  for_each = var.athena_workgroups
 
-  name                 = each.value.name
-  display_name         = each.value.display_name
-  policy_definition_id = each.value.policy_definition_id
-  management_group_id  = each.value.management_group_id
-  enforce              = each.value.enforce
-  parameters           = each.value.parameters
-  not_scopes           = each.value.not_scopes
-}
-
-module "role_assignment" {
-  source   = "./modules/role_assignment"
-  for_each = var.role_assignments
-
-  name               = each.value.name
-  scope              = each.value.scope
-  role_definition_id = each.value.role_definition_id
-  principal_id       = each.value.principal_id
+  name                               = each.value.name
+  description                        = each.value.description
+  state                              = each.value.state
+  enforce_workgroup_configuration    = each.value.enforce_workgroup_configuration
+  publish_cloudwatch_metrics_enabled = each.value.publish_cloudwatch_metrics_enabled
+  requester_pays_enabled             = each.value.requester_pays_enabled
+  bytes_scanned_cutoff_per_query     = each.value.bytes_scanned_cutoff_per_query
+  selected_engine_version            = each.value.selected_engine_version
+  tags                               = each.value.tags
 }
