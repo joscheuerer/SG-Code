@@ -1,22 +1,65 @@
 resource "aws_instance" "this" {
-  ami                    = var.ami
-  availability_zone      = var.availability_zone
-  ebs_optimized          = var.ebs_optimized
-  iam_instance_profile   = var.iam_instance_profile
-  instance_type          = var.instance_type
-  key_name               = var.key_name
-  monitoring             = var.monitoring
-  source_dest_check      = var.source_dest_check
-  subnet_id              = var.subnet_id
-  tags                   = var.tags
-  tenancy                = var.tenancy
-  vpc_security_group_ids = var.vpc_security_group_ids
+  ami                                  = var.ami
+  instance_type                        = var.instance_type
+  subnet_id                            = var.subnet_id
+  vpc_security_group_ids               = var.vpc_security_group_ids
+  associate_public_ip_address          = var.associate_public_ip_address
+  availability_zone                    = var.availability_zone
+  disable_api_stop                     = var.disable_api_stop
+  disable_api_termination              = var.disable_api_termination
+  ebs_optimized                        = var.ebs_optimized
+  hibernation                          = var.hibernation
+  instance_initiated_shutdown_behavior = var.instance_initiated_shutdown_behavior
+  monitoring                           = var.monitoring
+  source_dest_check                    = var.source_dest_check
+  tenancy                              = var.tenancy
+  tags                                 = var.tags
+  volume_tags                          = var.volume_tags
 
-  metadata_options {
-    http_endpoint               = var.metadata_http_endpoint
-    http_protocol_ipv6          = var.metadata_http_protocol_ipv6
-    http_put_response_hop_limit = var.metadata_http_put_response_hop_limit
-    http_tokens                 = var.metadata_http_tokens
-    instance_metadata_tags      = var.metadata_instance_metadata_tags
+  dynamic "root_block_device" {
+    for_each = var.root_block_device
+    content {
+      delete_on_termination = root_block_device.value.delete_on_termination
+      encrypted             = root_block_device.value.encrypted
+      iops                  = root_block_device.value.iops
+      throughput            = root_block_device.value.throughput
+      volume_size           = root_block_device.value.volume_size
+      volume_type           = root_block_device.value.volume_type
+      tags                  = root_block_device.value.tags
+    }
+  }
+
+  dynamic "credit_specification" {
+    for_each = var.credit_specification
+    content {
+      cpu_credits = credit_specification.value.cpu_credits
+    }
+  }
+
+  dynamic "metadata_options" {
+    for_each = var.metadata_options
+    content {
+      http_endpoint               = metadata_options.value.http_endpoint
+      http_protocol_ipv6          = metadata_options.value.http_protocol_ipv6
+      http_put_response_hop_limit = metadata_options.value.http_put_response_hop_limit
+      http_tokens                 = metadata_options.value.http_tokens
+      instance_metadata_tags      = metadata_options.value.instance_metadata_tags
+    }
+  }
+
+  dynamic "private_dns_name_options" {
+    for_each = var.private_dns_name_options
+    content {
+      enable_resource_name_dns_a_record    = private_dns_name_options.value.enable_resource_name_dns_a_record
+      enable_resource_name_dns_aaaa_record = private_dns_name_options.value.enable_resource_name_dns_aaaa_record
+      hostname_type                        = private_dns_name_options.value.hostname_type
+    }
+  }
+
+  dynamic "maintenance_options" {
+    for_each = var.maintenance_options
+    content {
+      auto_recovery = maintenance_options.value.auto_recovery
+    }
   }
 }

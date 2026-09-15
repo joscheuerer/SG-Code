@@ -1,22 +1,26 @@
-module "policy_assignment" {
-  source   = "./modules/policy_assignment"
-  for_each = var.policy_assignments
+module "instance" {
+  source   = "./modules/instance"
+  for_each = var.instances
 
-  name                 = each.value.name
-  display_name         = each.value.display_name
-  policy_definition_id = each.value.policy_definition_id
-  management_group_id  = each.value.management_group_id
-  enforce              = each.value.enforce
-  parameters           = each.value.parameters
-  not_scopes           = each.value.not_scopes
-}
-
-module "role_assignment" {
-  source   = "./modules/role_assignment"
-  for_each = var.role_assignments
-
-  name               = each.value.name
-  scope              = each.value.scope
-  role_definition_id = each.value.role_definition_id
-  principal_id       = each.value.principal_id
+  ami                                  = each.value.ami
+  instance_type                        = each.value.instance_type
+  subnet_id                            = each.value.subnet_id
+  vpc_security_group_ids               = each.value.vpc_security_group_ids
+  associate_public_ip_address          = each.value.associate_public_ip_address
+  availability_zone                    = each.value.availability_zone
+  disable_api_stop                     = each.value.disable_api_stop
+  disable_api_termination              = each.value.disable_api_termination
+  ebs_optimized                        = each.value.ebs_optimized
+  hibernation                          = each.value.hibernation
+  instance_initiated_shutdown_behavior = each.value.instance_initiated_shutdown_behavior
+  monitoring                           = each.value.monitoring
+  source_dest_check                    = each.value.source_dest_check
+  tenancy                              = each.value.tenancy
+  tags                                 = each.value.tags
+  volume_tags                          = each.value.volume_tags
+  root_block_device                    = each.value.root_block_device
+  credit_specification                 = each.value.credit_specification
+  metadata_options                     = each.value.metadata_options
+  private_dns_name_options             = each.value.private_dns_name_options
+  maintenance_options                  = each.value.maintenance_options
 }
