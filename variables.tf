@@ -1,24 +1,19 @@
-variable "policy_assignments" {
-  description = "Map of azurerm_policy_assignment instances"
-  type = map(object({
-    name                 = string
-    display_name         = optional(string, "")
-    policy_definition_id = string
-    management_group_id  = string
-    enforce              = optional(bool, true)
-    parameters           = optional(string, "")
-    not_scopes           = optional(list(string), [])
-  }))
-  default = {}
+variable "aws_region" {
+  type    = string
+  default = "eu-central-1"
 }
 
-variable "role_assignments" {
-  description = "Map of azurerm_role_assignment instances"
+variable "athena_workgroups" {
   type = map(object({
-    name               = string
-    scope              = string
-    role_definition_id = string
-    principal_id       = string
+    name                               = string
+    description                        = optional(string, "")
+    state                              = optional(string, "ENABLED")
+    enforce_workgroup_configuration    = optional(bool, true)
+    publish_cloudwatch_metrics_enabled = optional(bool, true)
+    requester_pays_enabled             = optional(bool, false)
+    bytes_scanned_cutoff_per_query     = optional(number, null)
+    selected_engine_version            = optional(string, null)
+    tags                               = optional(map(string), {})
   }))
   default = {}
 }
