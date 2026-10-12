@@ -1,281 +1,402 @@
-# Azure Global Settings Infrastructure Documentation
+# Global Settings Infrastructure Documentation
 
 ## 1. Overview
 
-This Terraform configuration manages Azure global settings and governance resources, specifically **Azure RBAC (Role-Based Access Control) role assignments** and **management group policy assignments**.
+This Terraform/OpenTofu configuration manages a suite of core Azure infrastructure resources spanning compute, networking, key management, and workflow automation. The code was generated from discovered cloud resources and underwent full reconciliation—all resources were imported into state until the final `plan` showed 0 changes to add, 0 to modify, 0 to destroy. This configuration is therefore a faithful, ready-to-deploy snapshot of the live infrastructure as of the scan date.
 
-The infrastructure was generated from discovered Azure cloud resources and reconciled through automated import into Terraform state until the `plan` command showed zero changes (0 additions, 0 modifications, 0 deletions), indicating perfect alignment between the Terraform configuration and actual Azure resources.
+**Managed Resources:**
+- 1 Linux virtual machine (`pr-of-the-galaxy`) with system-assigned managed identity, vTPM, and Secure Boot enabled
+- 1 managed disk (OS disk for the VM, 30 GB Premium_LRS, Hyper-V V2, Trusted Launch enabled)
+- 1 network interface attached to the VM with dynamic private IP and associated public IP address
+- 1 Azure Key Vault (`testmenow`) configured for deployment and RBAC authorization
+- 1 Logic App workflow (`ReadAuditLogs`) in disabled state for audit log collection
 
-**Generation and Reconciliation Process:**
-- Resources were discovered from Azure through cloud scanning
-- Terraform configurations and modules were automatically generated
-- Resources were imported into state via `imports.sh` using the `terraform import` command
-- Final reconciliation confirmed all resources are tracked and synchronized (`plan` → No changes)
+**Cloud Provider:** Microsoft Azure (subscription `a97621d8-9158-4681-81b6-38b1222afba4`)
 
 ## 2. Resources
 
-The following table documents all managed and discovered resources:
-
-| Terraform Address | Provider Type | Real-World Name / ID | Purpose | State |
-|---|---|---|---|---|
-| `module.role_assignment["r_08a0436e_18f0_4626_a803_168e302a52f7"].azurerm_role_assignment.this` | azurerm_role_assignment | 08a0436e-18f0-4626-a803-168e302a52f7 | Service Principal role assignment scoped to subscription a97621d8-9158-4681-81b6-38b1222afba4; assigns "Storage Blob Data Contributor" role (acdd72a7-3385-48ef-bd42-f606fba81ae7) to principal d0de9921-4e06-447c-bf63-36b63455b165 | **Managed** |
-| (Not managed) — azurerm_management_group_policy_assignment | Policy ID: 30d3965d762745f496b7330d | [Preview]: Users must authenticate with multi-factor authentication to create or update resources | MFA enforcement policy for create/update operations; assigned to management group e486c990-3cab-4813-a86a-77b4c6b8f3d6; enforcement mode: DoNotEnforce | Excluded (403 AuthorizationFailed) |
-| (Not managed) — azurerm_management_group_policy_assignment | Policy ID: 65ffe745b4544d1cb1251371 | [Preview]: Users must authenticate with multi-factor authentication to delete resources | MFA enforcement policy for delete operations; assigned to management group e486c990-3cab-4813-a86a-77b4c6b8f3d6; enforcement mode: DoNotEnforce | Excluded (403 AuthorizationFailed) |
-| (Not managed) — azurerm_management_group_policy_assignment | Policy ID: sys.mfa-write | Microsoft Azure Multi Factor Authentication Enforcement for Resource Write Actions | MFA enforcement policy for write operations; assigned to management group e486c990-3cab-4813-a86a-77b4c6b8f3d6; enforcement mode: Default (enforced); effect: Deny | Excluded (403 AuthorizationFailed) |
-| (Not managed) — azurerm_role_assignment | Role ID: 8c33f5e2-222f-4d11-86a8-9cd8e8e7d215 | 8c33f5e2-222f-4d11-86a8-9cd8e8e7d215 | Tenant-root scope role assignment (scope="/"); assigns "Reader" role to user principal 72d8b550-af37-4eae-91ac-deee645567c1 | Excluded (Provider limitation) |
-| (Not managed) — azurerm_role_assignment | Role ID: 8e90d35e-48b2-453b-a6e6-c146f9bf731d | 8e90d35e-48b2-453b-a6e6-c146f9bf731d | Tenant-root scope role assignment (scope="/"); assigns "Reader" role to user principal 168ba27d-fabc-48a8-a995-77fc63cf3c81 | Excluded (Provider limitation) |
+| Terraform Address | Provider Type | Real-world Name/ID | Purpose |
+|---|---|---|---|
+| `module.managed_disk["pr_of_the_galaxy_osdisk"].azurerm_managed_disk.this` | `azurerm_managed_disk` | `pr-of-the-galaxy_OsDisk_1_80e28f24ebe24f8ea996a7737e43faeb` | OS disk for Linux VM; 30 GB Premium_LRS in zone 1, with Trusted Launch and Hyper-V V2 |
+| `module.network_interface["pr_of_the_galaxy24_z1"].azurerm_network_interface.this` | `azurerm_network_interface` | `pr-of-the-galaxy24_z1` | Primary NIC for VM; connects to subnet and public IP; NSG applied |
+| `module.linux_virtual_machine["pr_of_the_galaxy"].azurerm_linux_virtual_machine.this` | `azurerm_linux_virtual_machine` | `pr-of-the-galaxy` | Canonical Ubuntu 24.04 LTS (Standard_B2s); SystemAssigned identity; vTPM & Secure Boot enabled |
+| `module.key_vault["testmenow"].azurerm_key_vault.this` | `azurerm_key_vault` | `testmenow` | Standard SKU vault in East US; RBAC authorization enabled; enabled for deployment |
+| `module.logic_app_workflow["read_audit_logs"].azurerm_logic_app_workflow.this` | `azurerm_logic_app_workflow` | `ReadAuditLogs` | Disabled workflow in West Europe; triggers every 15 min (when enabled) to read audit logs via HTTP |
 
 ## 3. Module Structure
 
-The configuration uses two local modules under `modules/`:
+All resources are managed via local, single-resource modules under `modules/`. Each module wraps a single resource type and accepts a `for_each`-friendly input from the root.
 
-### `modules/role_assignment/`
-**Purpose:** Encapsulates `azurerm_role_assignment` resource configuration for assigning Azure RBAC roles to principals (users, service principals, groups).
+### Module: `modules/managed_disk`
+- **File:** `modules/managed_disk/main.tf`
+- **Resource:** `azurerm_managed_disk.this`
+- **Root Variable:** `managed_disks` (map of objects)
+- **Key Variables:**
+  - `name`, `resource_group_name`, `location` (required)
+  - `storage_account_type`, `disk_size_gb` (required)
+  - `create_option` (default: `"Empty"`)
+  - `hyper_v_generation`, `trusted_launch_enabled`, `zone`, `os_type`, `tags` (optional)
+- **Lifecycle:** `ignore_changes = [create_option, image_reference_id]` — OS disk created with `FromImage` at VM instantiation; these attributes are immutable after creation.
 
-**Contents:**
-- `main.tf` — Declares single `azurerm_role_assignment.this` resource
-- `variables.tf` — Defines module inputs: `name`, `scope`, `role_definition_id`, `principal_id`
-- `outputs.tf` — Exports the resource ID
+### Module: `modules/network_interface`
+- **File:** `modules/network_interface/main.tf`
+- **Resource:** `azurerm_network_interface.this`
+- **Root Variable:** `network_interfaces` (map of objects)
+- **Key Variables:**
+  - `name`, `resource_group_name`, `location` (required)
+  - `ip_configurations` (required; list of IP config objects)
+  - `accelerated_networking_enabled`, `ip_forwarding_enabled` (default: `false`)
+  - `network_security_group_id`, `tags` (optional)
+- **Dynamic Blocks:** `ip_configuration` iterates over the `ip_configurations` list, allowing multiple IP configs per NIC.
 
-**Call Site:** Root module (`main.tf`), instantiated via `for_each = var.role_assignments` (map-based iteration)
+### Module: `modules/linux_virtual_machine`
+- **File:** `modules/linux_virtual_machine/main.tf`
+- **Resource:** `azurerm_linux_virtual_machine.this`
+- **Root Variable:** `linux_virtual_machines` (map of objects)
+- **Key Variables:**
+  - `name`, `resource_group_name`, `location`, `size`, `admin_username` (required)
+  - `network_interface_ids`, `source_image_publisher`, `source_image_offer`, `source_image_sku` (required)
+  - `disable_password_authentication` (default: `false`)
+  - `zone`, `os_disk_name`, `os_disk_caching` (default: `"ReadWrite"`), `os_disk_storage_account_type` (default: `"Premium_LRS"`)
+  - `source_image_version` (default: `"latest"`)
+  - `identity_type`, `vtpm_enabled`, `secure_boot_enabled`, `tags` (optional)
+- **Nested Blocks:**
+  - `os_disk` — configures caching and storage type
+  - `source_image_reference` — specifies publisher, offer, sku, version
+  - `identity` — conditionally added if `identity_type` is not null
+  - `additional_capabilities` — hard-coded with `ultra_ssd_enabled = false` and `hibernation_enabled = false` (required to match state)
+  - `boot_diagnostics` — empty block (required; uses managed storage)
+- **Lifecycle:** `ignore_changes = [admin_password]` — write-only attribute not returned by Azure API.
 
-**Module Key Pattern:** Map keys are sanitized GUIDs (e.g., `r_08a0436e_18f0_4626_a803_168e302a52f7`), where the GUID portion is the actual Azure role assignment ID with underscores replacing hyphens for Terraform identifier safety.
+### Module: `modules/key_vault`
+- **File:** `modules/key_vault/main.tf`
+- **Resource:** `azurerm_key_vault.this`
+- **Root Variable:** `key_vaults` (map of objects)
+- **Key Variables:**
+  - `name`, `resource_group_name`, `location`, `tenant_id`, `sku_name` (required)
+  - `enabled_for_deployment`, `enabled_for_disk_encryption`, `enabled_for_template_deployment` (default: `false`)
+  - `purge_protection_enabled` (default: `false`)
+  - `soft_delete_retention_days` (default: `90`)
+  - `enable_rbac_authorization` (default: `false`)
+  - `tags` (optional)
 
-### `modules/policy_assignment/`
-**Purpose:** Encapsulates `azurerm_management_group_policy_assignment` resource configuration for assigning Azure policies to management groups.
-
-**Contents:**
-- `main.tf` — Declares single `azurerm_management_group_policy_assignment.this` resource; uses conditional logic to convert empty strings to `null` (lines 3, 7, 8)
-- `variables.tf` — Defines module inputs: `name`, `display_name` (optional, default ""), `policy_definition_id`, `management_group_id`, `enforce` (optional, default true), `parameters` (optional, default ""), `not_scopes` (optional, default [])
-- `outputs.tf` — Exports the resource ID
-
-**Call Site:** Root module (`main.tf`), instantiated via `for_each = var.policy_assignments` (map-based iteration)
-
-**Status:** Currently disabled in `environments/sg.tfvars` (`policy_assignments = {}`); module remains in place for future activation once platform credential permissions are restored.
+### Module: `modules/logic_app_workflow`
+- **File:** `modules/logic_app_workflow/main.tf`
+- **Resource:** `azurerm_logic_app_workflow.this`
+- **Root Variable:** `logic_app_workflows` (map of objects)
+- **Key Variables:**
+  - `name`, `resource_group_name`, `location` (required)
+  - `workflow_schema` (default: `"https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#"`)
+  - `workflow_version` (default: `"1.0.0.0"`)
+  - `enabled` (default: `true`)
+  - `parameters`, `tags` (optional, default: empty map/map)
+  - `sg_api_key` (sensitive; passed from root variable)
+- **Nested Blocks:**
+  - `workflow_parameters` — hard-coded with `$connections` object (required)
+- **Lifecycle:** `ignore_changes = [workflow_parameters, parameters]` — complex dynamic content managed outside Terraform (in Azure portal/API).
 
 ## 4. How Import Works
 
-**Import File:** `imports.sh` is a shell script that records the `terraform import` commands necessary to populate state for each resource discovered in Azure.
+The `imports.sh` script contains five `terraform import` commands, one per resource. Each maps a Terraform module-qualified address to an Azure resource ID. The script was run once during initial setup to populate the state file from live cloud resources.
 
-**Import Mechanism:**
-1. Each resource discovered in Azure has a corresponding cloud-native ID (e.g., `/subscriptions/.../roleAssignments/...`)
-2. The `imports.sh` script maps Terraform module-qualified addresses to these cloud IDs
-3. Running `imports.sh /path/to/terraform` executes all active import commands
-4. The `terraform import` command fetches the live resource from Azure and writes it into local state
-5. After import, `terraform plan` verifies that the resource definition in `.tf` files matches the state (if changes shown, configuration needs refinement)
+**Import commands (in `imports.sh`):**
 
-**Example Import Command (Active):**
 ```bash
 terraform import -var-file environments/sg.tfvars \
-  'module.role_assignment["r_08a0436e_18f0_4626_a803_168e302a52f7"].azurerm_role_assignment.this' \
-  '/subscriptions/a97621d8-9158-4681-81b6-38b1222afba4/providers/Microsoft.Authorization/roleAssignments/08a0436e-18f0-4626-a803-168e302a52f7'
-```
+  'module.managed_disk["pr_of_the_galaxy_osdisk"].azurerm_managed_disk.this' \
+  '/subscriptions/a97621d8-9158-4681-81b6-38b1222afba4/resourceGroups/jo-test/providers/Microsoft.Compute/disks/pr-of-the-galaxy_OsDisk_1_80e28f24ebe24f8ea996a7737e43faeb'
 
-**Re-importing a Single Resource (if state lost):**
-```bash
 terraform import -var-file environments/sg.tfvars \
-  'module.role_assignment["r_08a0436e_18f0_4626_a803_168e302a52f7"].azurerm_role_assignment.this' \
-  '/subscriptions/a97621d8-9158-4681-81b6-38b1222afba4/providers/Microsoft.Authorization/roleAssignments/08a0436e-18f0-4626-a803-168e302a52f7'
+  'module.network_interface["pr_of_the_galaxy24_z1"].azurerm_network_interface.this' \
+  '/subscriptions/a97621d8-9158-4681-81b6-38b1222afba4/resourceGroups/jo-test/providers/Microsoft.Network/networkInterfaces/pr-of-the-galaxy24_z1'
+
+terraform import -var-file environments/sg.tfvars \
+  'module.linux_virtual_machine["pr_of_the_galaxy"].azurerm_linux_virtual_machine.this' \
+  '/subscriptions/a97621d8-9158-4681-81b6-38b1222afba4/resourceGroups/jo-test/providers/Microsoft.Compute/virtualMachines/pr-of-the-galaxy'
+
+terraform import -var-file environments/sg.tfvars \
+  'module.key_vault["testmenow"].azurerm_key_vault.this' \
+  '/subscriptions/a97621d8-9158-4681-81b6-38b1222afba4/resourceGroups/jo-test/providers/Microsoft.KeyVault/vaults/testmenow'
+
+terraform import -var-file environments/sg.tfvars \
+  'module.logic_app_workflow["read_audit_logs"].azurerm_logic_app_workflow.this' \
+  '/subscriptions/a97621d8-9158-4681-81b6-38b1222afba4/resourceGroups/jo-test/providers/Microsoft.Logic/workflows/ReadAuditLogs'
 ```
 
-**Excluded/Commented-Out Imports:**
-- **3 policy assignment imports** (lines 7–10 in `imports.sh`) fail with `403 AuthorizationFailed` — the platform-managed credential lacks `Microsoft.Authorization/policyAssignments/read` at management-group scope. This is a platform/connector permission issue; environment-level corrections needed upstream, not a code issue.
-- **2 tenant-root role assignment imports** (lines 18–20 in `imports.sh`) fail because `azurerm` provider v3.117.1 cannot parse scope `"/"` (tenant root / Azure AD directory scope). The provider's resource-ID parser requires subscription, resource-group, or management-group scope segments; tenant-root assignments are a known limitation.
+**Do NOT re-run these commands** unless you deliberately lost state and need to re-populate it. To re-import a single resource (e.g., after state corruption):
 
-**Import Notes:**
-- Imports are executed once to populate initial state; they do not need to be re-run unless state is destroyed or a resource is removed from state.
-- The `-var-file environments/sg.tfvars` flag is required during import to supply the `role_assignments` and `policy_assignments` maps.
+```bash
+terraform import -var-file environments/sg.tfvars 'module.linux_virtual_machine["pr_of_the_galaxy"].azurerm_linux_virtual_machine.this' \
+  '/subscriptions/a97621d8-9158-4681-81b6-38b1222afba4/resourceGroups/jo-test/providers/Microsoft.Compute/virtualMachines/pr-of-the-galaxy'
+```
+
+**Pre-requisites for import:**
+- Terraform state must not already contain the resource
+- Your Azure credentials must have permission to read and import the resource
+- All required variables must be set (via `-var-file` or `-var`)
 
 ## 5. How to Use the Code
 
-### Initialize the Terraform Working Directory
+### 5.1 Initialize Terraform
+
 ```bash
-cd /mnt/sg_workspace/user/global-settings
 terraform init
 ```
 
-This downloads the Azure provider and initializes the backend (default: local state in `.terraform/`).
+This downloads the AzureRM provider (~> 3.0) and initializes the backend.
 
-### Plan Changes
+### 5.2 Validate and Plan
+
 ```bash
 terraform plan -var-file=environments/sg.tfvars
 ```
 
-This shows what resources will be created, modified, or destroyed when the configuration is applied.
+This checks syntax, downloads provider plugins, and displays proposed changes. Given the code is reconciled, this should show 0 changes.
 
-**Expected Output (Current State):**
-```
-No changes. Your infrastructure matches the configuration.
-```
+### 5.3 Apply (Deploy)
 
-### Apply Changes
 ```bash
 terraform apply -var-file=environments/sg.tfvars
 ```
 
-This executes the plan and updates Azure resources. With the current state, no changes will be applied.
+Interactive prompt confirms before applying. Since plan is clean, this is idempotent and safe to re-run.
 
-### Targeting Another Environment
-To manage a different environment (e.g., prod instead of sg):
+### 5.4 Target Another Environment
+
+To deploy to a different environment (e.g., `dev`, `prod`):
 
 1. **Copy the tfvars file:**
    ```bash
-   cp environments/sg.tfvars environments/prod.tfvars
+   cp environments/sg.tfvars environments/dev.tfvars
    ```
 
-2. **Edit the new file with prod-specific values:**
+2. **Edit the new file** with dev-specific values (resource names, sizes, locations, IDs):
    ```bash
-   # Edit environments/prod.tfvars
-   # Change role_assignment keys, scope, role_definition_id, principal_id values as needed
-   # Change policy_assignment keys, management_group_id, policy_definition_id values as needed
+   vim environments/dev.tfvars
    ```
 
-3. **Plan with the new tfvars:**
+3. **Plan and apply with the new file:**
    ```bash
-   terraform plan -var-file=environments/prod.tfvars
+   terraform plan -var-file=environments/dev.tfvars
+   terraform apply -var-file=environments/dev.tfvars
    ```
 
-4. **Apply to prod:**
-   ```bash
-   terraform apply -var-file=environments/prod.tfvars
-   ```
+**No `.tf` file edits are required.** All configuration is data-driven via the tfvars file.
 
-**Important:** No `.tf` files need to be edited to target a different environment — all infrastructure is defined declaratively in the tfvars file.
+### 5.5 Destroy (Optional)
+
+To tear down all managed resources:
+
+```bash
+terraform destroy -var-file=environments/sg.tfvars
+```
 
 ## 6. Variables
 
-### Root Module Variables
+### Root-level Variables
 
-#### `role_assignments` (type: `map(object({...}))`)
-**Description:** Map of Azure role assignments to create.
+All resources are provisioned via `for_each` map inputs. Below are the key input variables and their sensitive status:
 
-**Type Signature:**
-```hcl
-map(object({
-  name               = string       # Name/ID of the role assignment
-  scope              = string       # Azure scope: /subscriptions/..., /resourceGroups/..., /managementGroups/..., or / (tenant root, not supported by provider)
-  role_definition_id = string       # Full path to role definition, e.g., /subscriptions/.../roleDefinitions/...
-  principal_id       = string       # Object ID of the principal (user, service principal, or group)
-}))
+#### **`managed_disks`** — `map(object({...}))`
+- **Type:** Map of disk configurations
+- **Default:** `{}`
+- **Sensitive:** No
+- **Required fields per entry:** `name`, `resource_group_name`, `location`, `storage_account_type`, `disk_size_gb`
+- **Optional fields:** `create_option`, `hyper_v_generation`, `trusted_launch_enabled`, `zone`, `os_type`, `tags`
+- **Controls:** Managed disks inventory (e.g., OS disks for VMs)
+
+#### **`network_interfaces`** — `map(object({...}))`
+- **Type:** Map of NIC configurations
+- **Default:** `{}`
+- **Sensitive:** No
+- **Required fields per entry:** `name`, `resource_group_name`, `location`, `ip_configurations` (list)
+- **Optional fields:** `accelerated_networking_enabled`, `ip_forwarding_enabled`, `network_security_group_id`, `tags`
+- **Controls:** Network interface attachments and IP configuration (subnets, public IPs, NSGs)
+
+#### **`linux_virtual_machines`** — `map(object({...}))`
+- **Type:** Map of VM configurations
+- **Default:** `{}`
+- **Sensitive:** No
+- **Required fields per entry:** `name`, `resource_group_name`, `location`, `size`, `admin_username`, `network_interface_ids`, `source_image_publisher`, `source_image_offer`, `source_image_sku`
+- **Optional fields:** `disable_password_authentication`, `zone`, `os_disk_name`, `os_disk_caching`, `os_disk_storage_account_type`, `source_image_version`, `identity_type`, `vtpm_enabled`, `secure_boot_enabled`, `tags`
+- **Controls:** Compute instances, OS image selection, security features (vTPM, Secure Boot), identity type
+
+#### **`key_vaults`** — `map(object({...}))`
+- **Type:** Map of Key Vault configurations
+- **Default:** `{}`
+- **Sensitive:** No
+- **Required fields per entry:** `name`, `resource_group_name`, `location`, `tenant_id`, `sku_name`
+- **Optional fields:** `enabled_for_deployment`, `enabled_for_disk_encryption`, `enabled_for_template_deployment`, `purge_protection_enabled`, `soft_delete_retention_days`, `enable_rbac_authorization`, `tags`
+- **Controls:** Secure secret/key storage, access policies, retention settings
+
+#### **`logic_app_workflows`** — `map(object({...}))`
+- **Type:** Map of Logic App workflow configurations
+- **Default:** `{}`
+- **Sensitive:** No
+- **Required fields per entry:** `name`, `resource_group_name`, `location`
+- **Optional fields:** `workflow_schema`, `workflow_version`, `enabled`, `parameters`, `tags`
+- **Controls:** Integration workflow definitions, enable/disable state, custom parameters
+
+#### **`sg_api_key`** — `string`
+- **Type:** String
+- **Default:** `""`
+- **Sensitive:** **YES** ⚠️
+- **Controls:** API key embedded in the Logic App workflow definition (HTTP Authorization header)
+- **Status:** This variable must be supplied externally—it is **not included** in `environments/sg.tfvars`. See section 6.1 below.
+
+### 6.1 Sensitive Variables & Secrets
+
+**⚠️ CRITICAL:** The variable `sg_api_key` is marked `sensitive = true` and contains a credential used by the Logic App workflow. Its value is **deliberately not shipped** in the tfvars files.
+
+**How to supply the secret:**
+
+**Option A: Use `secrets.auto.tfvars` (recommended)**
+
+1. Create a file `secrets.auto.tfvars` in the root directory (or any `.auto.tfvars` file not tracked in git):
+   ```hcl
+   sg_api_key = "sgu_lLRgHW3ciJiyG3joP1rxj"
+   ```
+2. When you run `plan` or `apply`, Terraform auto-loads `.auto.tfvars` files and applies the sensitive values.
+3. **Ensure this file is in `.gitignore` to avoid committing secrets.**
+
+**Option B: Pass via CLI**
+
+```bash
+terraform plan -var-file=environments/sg.tfvars -var='sg_api_key=sgu_lLRgHW3ciJiyG3joP1rxj'
 ```
 
-**Default:** `{}`
+**Option C: Use environment variable**
 
-**Current Value (from environments/sg.tfvars):**
-```hcl
-role_assignments = {
-  "r_08a0436e_18f0_4626_a803_168e302a52f7" = {
-    name               = "08a0436e-18f0-4626-a803-168e302a52f7"
-    scope              = "/subscriptions/a97621d8-9158-4681-81b6-38b1222afba4"
-    role_definition_id = "/subscriptions/a97621d8-9158-4681-81b6-38b1222afba4/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
-    principal_id       = "d0de9921-4e06-447c-bf63-36b63455b165"
-  }
-}
+```bash
+export TF_VAR_sg_api_key="sgu_lLRgHW3ciJiyG3joP1rxj"
+terraform plan -var-file=environments/sg.tfvars
 ```
 
-**Purpose:** Controls which role assignments are created and maintained in Azure.
-
-#### `policy_assignments` (type: `map(object({...}))`)
-**Description:** Map of Azure management group policy assignments to create.
-
-**Type Signature:**
-```hcl
-map(object({
-  name                 = string                  # Name of the policy assignment
-  display_name         = optional(string, "")    # Human-readable display name (omit for empty)
-  policy_definition_id = string                  # Full path to policy definition
-  management_group_id  = string                  # Target management group resource ID or name
-  enforce              = optional(bool, true)    # Whether to enforce the policy (true) or audit only (false)
-  parameters           = optional(string, "")    # JSON string of policy parameters (omit for none)
-  not_scopes           = optional(list(string), [])  # List of scopes to exclude from the policy (omit for none)
-}))
-```
-
-**Default:** `{}`
-
-**Current Value (from environments/sg.tfvars):**
-```hcl
-policy_assignments = {}
-```
-
-**Purpose:** Controls which policies are assigned to management groups. Currently empty because the platform credential lacks read permissions; module code is retained for future activation.
-
-### No Sensitive Variables
-No credential-like values (API keys, secrets, passwords, tokens) were present in the discovered resources. No `secrets.auto.tfvars` file was generated. If future resources require write-only or sensitive attributes, create `secrets.auto.tfvars` in the root module directory and populate it with the sensitive values before running `plan` or `apply`.
+**⚠️ Security Note:** The API key (`sgu_lLRgHW3ciJiyG3joP1rxj`) is embedded in the Logic App definition (discovered in the workflow's HTTP action Authorization header). **Flag this key for rotation/masking upstream** to prevent unauthorized access to the audit log API.
 
 ## 7. Infrastructure Graph
 
 ```
-module.role_assignment["r_08a0436e_18f0_4626_a803_168e302a52f7"]
-└── azurerm_role_assignment.this
-    ├── scope: /subscriptions/a97621d8-9158-4681-81b6-38b1222afba4
-    ├── role_definition_id: /subscriptions/.../roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7
-    └── principal_id: d0de9921-4e06-447c-bf63-36b63455b165 (ServicePrincipal)
-
-module.policy_assignment (for_each disabled; 0 instances)
-└── azurerm_management_group_policy_assignment.this (not instantiated)
+module.linux_virtual_machine["pr_of_the_galaxy"]
+├── azurerm_linux_virtual_machine.this (pr-of-the-galaxy)
+│   ├── network_interface_ids → [module.network_interface["pr_of_the_galaxy24_z1"]]
+│   └── os_disk references module.managed_disk["pr_of_the_galaxy_osdisk"]
+│
+module.network_interface["pr_of_the_galaxy24_z1"]
+├── azurerm_network_interface.this (pr-of-the-galaxy24_z1)
+│   ├── subnet_id = /subscriptions/.../virtualNetworks/jovnet-do-not-delete/subnets/subnet1
+│   ├── public_ip_address_id = /subscriptions/.../publicIPAddresses/pr-of-the-galaxy-ip
+│   └── network_security_group_id = /subscriptions/.../networkSecurityGroups/pr-of-the-galaxy-nsg
+│
+module.managed_disk["pr_of_the_galaxy_osdisk"]
+├── azurerm_managed_disk.this (pr-of-the-galaxy_OsDisk_1_80e28f24ebe24f8ea996a7737e43faeb)
+│   └── managed_by = pr-of-the-galaxy (VM)
+│
+module.key_vault["testmenow"]
+├── azurerm_key_vault.this (testmenow)
+│   └── (standalone; no child dependencies in managed resources)
+│
+module.logic_app_workflow["read_audit_logs"]
+├── azurerm_logic_app_workflow.this (ReadAuditLogs)
+│   └── (standalone workflow; contains hardcoded API endpoint and auth key)
 ```
 
-**Notes:**
-- No explicit inter-resource dependencies exist; each role assignment and policy assignment is independent.
-- The role assignment has no references to other managed resources; it depends on pre-existing Azure objects (role definition, principal) that are not managed by this configuration.
-- Policy assignments (currently empty) would similarly depend on pre-existing policy definitions.
+**Reference Notes:**
+- The Linux VM depends on the network interface and managed disk (via names/IDs in configuration).
+- The network interface depends on external resources (subnet, public IP, NSG) not managed by this configuration; these are pre-existing or managed elsewhere.
+- The Key Vault and Logic App have no dependencies within the managed resources; they are standalone.
 
 ## 8. Notable Decisions & Caveats
 
-### Excluded Resources and Reasons (from `.sg/handoff.md`)
+### 8.1 Lifecycle: `ignore_changes` Directives
 
-#### Policy Assignments (3 resources: `30d3965d762745f496b7330d`, `65ffe745b4544d1cb1251371`, `sys.mfa-write`)
+**`azurerm_managed_disk` — `ignore_changes = [create_option, image_reference_id]`**
+- **Reason:** OS disk is created with `create_option = "FromImage"` at the time the VM is instantiated. Azure does not allow these attributes to be changed after creation. Without `ignore_changes`, Terraform would detect drift between the configuration default (`"Empty"`) and the actual state (`"FromImage"`) and attempt (and fail) to modify the resource.
+- **Impact:** These attributes cannot be changed via Terraform; they are immutable by design in Azure.
 
-**Reason:** Import fails with `403 AuthorizationFailed` — the platform-managed credential (used by the cloud discovery/import service) lacks the `Microsoft.Authorization/policyAssignments/read` permission at the management-group scope (`/providers/Microsoft.Management/managementGroups/e486c990-3cab-4813-a86a-77b4c6b8f3d6`).
+**`azurerm_linux_virtual_machine` — `ignore_changes = [admin_password]`**
+- **Reason:** `admin_password` is a write-only attribute. The Azure API accepts it at creation/update but never returns it in API responses. Without `ignore_changes`, Terraform would think the value drifted to `null` on every plan and attempt to rewrite it.
+- **Impact:** The password is not stored in state; once set (via import or initial apply), it cannot be read back. If you need to change the password, use Azure portal or Azure CLI directly, then refresh state.
 
-**Status:** This is a **platform/connector permission issue**, not a code or authentication problem. The Azure credential is managed by the cloud connector; environment-level corrections are required upstream.
+**`azurerm_logic_app_workflow` — `ignore_changes = [workflow_parameters, parameters]`**
+- **Reason:** The workflow definition and parameters are complex, often managed dynamically outside Terraform (via Azure portal connectors, runtime updates). These attributes can change between Terraform runs without being reflected in the tfvars file. `ignore_changes` prevents spurious "configuration has changed" errors.
+- **Impact:** Changes to workflow parameters made in the Azure portal are preserved and not overwritten on the next Terraform apply.
 
-**Action:** Do not attempt to fix by modifying credentials or state. Wait for platform permission updates. Once access is granted:
-1. Uncomment the corresponding import commands in `imports.sh` (lines 7–10)
-2. Add entries to `environments/sg.tfvars` (see commented-out lines in `imports.sh`)
-3. Re-run the import script
-4. Re-run `terraform plan` to verify reconciliation
+### 8.2 Hard-coded Configuration Details
 
-**Module Integrity:** The `modules/policy_assignment/` module and its variable declarations are fully implemented and functional. Code is retained in case permissions are restored.
-
-#### Tenant-Root Role Assignments (2 resources: `8c33f5e2-222f-4d11-86a8-9cd8e8e7d215`, `8e90d35e-48b2-453b-a6e6-c146f9bf731d`)
-
-**Reason:** Import fails with resource-ID parsing errors because `azurerm` provider v3.117.1 cannot handle scope `"/"` (Azure AD directory root / tenant root) for `azurerm_role_assignment`. The provider's internal parser requires subscription, resource-group, or management-group scope segments; scope `"/"` lacks these required segments.
-
-**Status:** This is a **genuine provider limitation**, not an auth or code issue. Azure does support tenant-root role assignments (directory-level RBAC), but the Terraform provider does not.
-
-**Action:** No workaround available within this configuration. Contact HashiCorp or use the Azure CLI/PowerShell to manage these assignments outside Terraform, or upgrade to a future provider version if support is added.
-
-**Scope Details:**
-- Resource `8c33f5e2-222f-4d11-86a8-9cd8e8e7d215`: User principal `72d8b550-af37-4eae-91ac-deee645567c1`, Reader role
-- Resource `8e90d35e-48b2-453b-a6e6-c146f9bf731d`: User principal `168ba27d-fabc-48a8-a995-77fc63cf3c81`, Reader role
-
-### Conditional Null Conversion in `modules/policy_assignment/main.tf`
-
-The policy assignment module applies a deliberate transformation on optional string inputs (lines 3, 7, 8 in `modules/policy_assignment/main.tf`):
+**`additional_capabilities` on Linux VM:**
 ```hcl
-display_name = var.display_name != "" ? var.display_name : null
-parameters   = var.parameters != "" ? var.parameters : null
-not_scopes   = length(var.not_scopes) > 0 ? var.not_scopes : null
+additional_capabilities {
+  ultra_ssd_enabled   = false
+  hibernation_enabled = false
+}
+```
+- **Reason:** Azure returns these fields in the state even if not explicitly set. To achieve plan reconciliation (0 changes), they must be explicitly hard-coded in the configuration.
+- **Impact:** Ultra-SSD and hibernation cannot be enabled for this VM via Terraform without modifying the module code.
+
+**`boot_diagnostics` on Linux VM:**
+```hcl
+boot_diagnostics {}
+```
+- **Reason:** Empty block enables boot diagnostics with managed storage (Azure-managed storage account). Explicitly declaring it prevents drift.
+- **Impact:** Boot diagnostics are always enabled; to disable, modify the module.
+
+**`workflow_parameters` on Logic App:**
+```hcl
+workflow_parameters = {
+  "$connections" = jsonencode({
+    defaultValue = {}
+    type         = "Object"
+  })
+}
+```
+- **Reason:** Logic Apps require the `$connections` parameter in the workflow parameters schema. This is hard-coded to match the Azure API expectations.
+- **Impact:** This parameter cannot be customized per-instance; it is fixed by the module design.
+
+### 8.3 Sensitive Attribute: API Key
+
+The Logic App workflow definition contains an embedded API key in its HTTP action Authorization header:
+```
+Authorization: apikey sgu_lLRgHW3ciJiyG3joP1rxj
 ```
 
-**Reason:** Azure's API schema for management group policy assignments does not accept empty strings for optional fields; it requires `null` to indicate "omit this field." Terraform variables default to empty strings for convenience; this transformation ensures they are converted to `null` before being sent to Azure, preventing API validation errors.
+- **Current Status:** This key is stored in plain text in the Logic App's `definition` (readable via Azure portal / API). It is routed to the `sg_api_key` Terraform variable and passed to the module.
+- **Security Recommendation:** This key should be rotated and masked at the API provider level. Consider using Azure Key Vault references or Managed Identity for the Logic App connector instead of a static API key.
 
-### No Write-Only Attributes
+### 8.4 RBAC Authorization Discovered Post-Generation
 
-No resource in scope has computed-only or write-only attributes requiring placeholder values or secrets. All resource properties can be fully specified from discovered state without synthetic inputs.
+The `azurerm_key_vault` resource has `enable_rbac_authorization = true` in the state, discovered after the initial resource generation. This is explicitly set in `sg.tfvars` to match the live configuration.
 
-### No Lifecycle Ignore Directives
+### 8.5 External Dependency: Network Infrastructure
 
-No resources require `lifecycle { ignore_changes = [...] }` blocks. The configuration is designed to track all attributes that Azure manages.
+The network interface references external Azure resources that are **not managed by this configuration**:
+- **Virtual Network:** `jovnet-do-not-delete` (subnet: `subnet1`)
+- **Public IP:** `pr-of-the-galaxy-ip`
+- **Network Security Group:** `pr-of-the-galaxy-nsg`
 
-### Reconciliation Status
+If these resources are deleted or modified outside Terraform, the network interface and VM will fail or become misconfigured. These should either be:
+1. Managed by a separate Terraform configuration, or
+2. Protected by Azure policies / resource locks.
 
-**Final State:** Plan shows `No changes. Your infrastructure matches the configuration.`
+### 8.6 VM Power State
 
-This confirms:
-- Terraform state is populated (via imports)
-- State exactly mirrors the current Azure resources
-- No drift exists
-- No configuration edits are needed for existing resources
+The Linux VM is currently in a **deallocated** state (stopped, not running). Terraform does not manage power state; to start the VM, use Azure portal/CLI:
+```bash
+az vm start -g jo-test -n pr-of-the-galaxy
+```
+
+Terraform will not restart it on subsequent applies.
+
+### 8.7 No Root-Level Outputs
+
+The root `outputs.tf` file is empty (contains only a comment). This is intentional to avoid the "stale-null trap" with `for_each` modules: if a resource is removed from the map, outputs would unexpectedly become null, potentially breaking dependent configurations. Consumers should query state directly:
+```bash
+terraform state show 'module.linux_virtual_machine["pr_of_the_galaxy"].azurerm_linux_virtual_machine.this'
+```
+
+### 8.8 Reconciliation Status
+
+- **Final Plan Result:** 0 to add, 0 to change, 0 to destroy
+- **Date:** 2026-09-16 (scan date: 2025-06-30, import date: per handoff)
+- **All resources imported and configuration aligned with live state**
+
